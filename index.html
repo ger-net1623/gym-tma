@@ -3,199 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrainLog MVP</title>
+    <title>TrainLog Smart</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --- СТИЛИ (Внешний вид) --- */
+        /* --- СТИЛИ --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #212121); /* Цвет фона из ТГ */
-            color: var(--tg-theme-text-color, #ffffff); /* Цвет текста из ТГ */
+            background-color: var(--tg-theme-bg-color, #212121);
+            color: var(--tg-theme-text-color, #ffffff);
             margin: 0; padding: 15px;
             display: flex; flex-direction: column; align-items: center;
         }
 
-        /* Карточка - белый полупрозрачный блок */
         .card {
-            background: rgba(255, 255, 255, 0.08); /* Чуть светлее фона */
-            padding: 20px; 
-            border-radius: 16px;
-            width: 100%; 
-            box-sizing: border-box; /* Чтобы отступы не ломали ширину */
-            margin-bottom: 15px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px; border-radius: 16px;
+            width: 100%; box-sizing: border-box;
+            margin-bottom: 15px; text-align: center;
         }
 
-        /* Поля ввода */
+        /* Стиль для цифр статистики */
+        .stat-value { font-size: 24px; font-weight: bold; color: var(--tg-theme-button-color, #3390ec); }
+        .stat-label { font-size: 12px; opacity: 0.7; }
+
         input {
-            width: 100%; 
-            padding: 12px; 
-            margin: 8px 0;
-            box-sizing: border-box;
-            border-radius: 10px; 
-            border: 1px solid #444;
-            background: var(--tg-theme-secondary-bg-color, #333); 
-            color: var(--tg-theme-text-color, #fff);
-            font-size: 16px;
+            width: 100%; padding: 12px; margin: 5px 0;
+            border-radius: 10px; border: 1px solid #444;
+            background: var(--tg-theme-secondary-bg-color, #333);
+            color: var(--tg-theme-text-color, #fff); box-sizing: border-box;
         }
 
-        /* Главная кнопка */
         .main-btn {
-            width: 100%; 
-            padding: 14px;
-            margin-top: 10px;
+            width: 100%; padding: 14px; margin-top: 10px;
             background-color: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
-            border: none; 
-            border-radius: 10px; 
-            font-size: 16px; font-weight: 600;
-            cursor: pointer;
+            border: none; border-radius: 10px; font-weight: 600; cursor: pointer;
         }
         
-        .main-btn:active { transform: scale(0.98); opacity: 0.9; }
+        /* Сообщение от "Тренера" */
+        #coach-msg {
+            font-style: italic; color: #4ade80; margin-top: 10px; min-height: 20px;
+        }
 
         /* Элемент истории */
         .history-item {
-            display: flex; justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            text-align: left;
-            font-size: 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: left; font-size: 14px;
         }
-        .history-item:last-child { border-bottom: none; }
-        .date { font-size: 12px; opacity: 0.6; }
-
-        /* Персонаж */
-        #char-visual { font-size: 60px; margin: 10px 0; display: block; }
+        .del-btn {
+            background: none; border: none; font-size: 16px; cursor: pointer; padding: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div id="char-visual">🐣</div>
-        <h2 id="status-text">Новичок</h2>
-        <p style="opacity: 0.7; margin: 5px 0;">Тренировок: <b id="train-count">0</b></p>
+    <div class="card" style="display: flex; justify-content: space-around;">
+        <div>
+            <div class="stat-value" id="total-tonnage">0</div>
+            <div class="stat-label">Тоннаж (кг)</div>
+        </div>
+        <div>
+            <div class="stat-value" id="train-count">0</div>
+            <div class="stat-label">Подходов</div>
+        </div>
     </div>
 
     <div class="card">
-        <h3 style="margin-top: 0;">Добавить подход</h3>
+        <h3>Запись подхода</h3>
         <input type="text" id="exercise-input" placeholder="Упражнение (напр. Жим)">
         <div style="display: flex; gap: 10px;">
             <input type="number" id="weight-input" placeholder="Вес (кг)">
             <input type="number" id="reps-input" placeholder="Повторы">
         </div>
-        <button class="main-btn" onclick="saveData()">Записать</button>
-        <button class="main-btn" onclick="clearData()" style="background-color: #ff4d4d; margin-top: 10px; font-size: 12px;">Сбросить прогресс (Тест)</button>
-    </div>
+        <button class="main-btn" onclick="saveData()">Сохранить</button>
+        <div id="coach-msg"></div> </div>
 
     <div class="card">
-        <h3 style="margin-top: 0; text-align: left;">История (Последние 5)</h3>
-        <div id="history-list">
-            <p style="opacity: 0.5; font-size: 14px;">Пока пусто...</p>
-        </div>
+        <h3 style="text-align: left; margin-bottom: 10px;">История</h3>
+        <div id="history-list"></div>
+        <button onclick="clearData()" style="background: none; border: none; color: #ff5555; margin-top: 15px; font-size: 12px; cursor: pointer;">Сбросить всё</button>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // На весь экран
+        tg.expand();
 
-        // --- ЛОГИКА ---
-        
-        // 1. Загружаем данные из памяти телефона при запуске
-        // "train_log_v1" - это ключ (как имя папки), где мы храним данные
+        // База фраз "Тренера"
+        const phrases = [
+            "Отличная работа! 💪", "Легкий вес, детка!", "Мощь растет!", 
+            "Железо покоряется тебе!", "Еще один шаг к цели!", 
+            "Не останавливайся!", "Красавчик, жми еще!", "Сила есть!"
+        ];
+
+        // Загрузка
         let savedData = localStorage.getItem('train_log_v1');
         let workouts = savedData ? JSON.parse(savedData) : [];
-
-        // Сразу обновляем экран, если данные уже были
         renderInterface();
 
-        // 2. Функция сохранения (вызывается кнопкой)
         function saveData() {
-            // Берем значения из полей
-            let exercise = document.getElementById('exercise-input').value;
-            let weight = document.getElementById('weight-input').value;
-            let reps = document.getElementById('reps-input').value;
+            let ex = document.getElementById('exercise-input').value;
+            let w = parseFloat(document.getElementById('weight-input').value); // Число
+            let r = parseFloat(document.getElementById('reps-input').value); // Число
 
-            // Проверка: если пусто, ругаемся
-            if(!exercise || !weight || !reps) {
-                tg.showAlert("Пожалуйста, заполни все поля!");
-                return;
+            if(!ex || !w || !r) {
+                tg.showAlert("Заполни все поля!"); return;
             }
 
-            // Создаем объект тренировки
+            // Математика: считаем объем (тоннаж)
+            let vol = Math.round(w * r);
+
             let newRecord = {
-                id: Date.now(), // уникальный номер (время)
-                name: exercise,
-                w: weight,
-                r: reps,
+                id: Date.now(),
+                name: ex, w: w, r: r,
+                vol: vol, // Сохраняем объем
                 date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
 
-            // Добавляем в начало списка
             workouts.unshift(newRecord);
+            updateStorage();
 
-            // СОХРАНЯЕМ В ПАМЯТЬ (Самое важное!)
-            localStorage.setItem('train_log_v1', JSON.stringify(workouts));
-
-            // Вибрация успеха
-            tg.HapticFeedback.notificationOccurred('success');
-
-            // Чистим поля и обновляем экран
+            // Мотивация
+            const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+            document.getElementById('coach-msg').innerText = randomPhrase;
+            
+            // Очистка полей
             document.getElementById('exercise-input').value = "";
             document.getElementById('weight-input').value = "";
             document.getElementById('reps-input').value = "";
-            
+
+            tg.HapticFeedback.notificationOccurred('success');
             renderInterface();
         }
 
-        // 3. Функция отрисовки (обновляет экран на основе данных)
-        function renderInterface() {
-            // Обновляем счетчик
-            let count = workouts.length;
-            document.getElementById('train-count').innerText = count;
-
-            // Логика персонажа (Простая)
-            let char = "🐣";
-            let title = "Новичок";
-            
-            if (count >= 5) { char = "🐥"; title = "Любитель"; }
-            if (count >= 15) { char = "🐓"; title = "Опытный"; }
-            if (count >= 30) { char = "🦖"; title = "Монстр"; }
-
-            document.getElementById('char-visual').innerText = char;
-            document.getElementById('status-text').innerText = title;
-
-            // Отрисовка истории
-            let historyHTML = "";
-            // Берем только первые 5 записей
-            workouts.slice(0, 5).forEach(item => {
-                historyHTML += `
-                    <div class="history-item">
-                        <div><b>${item.name}</b></div>
-                        <div>${item.w}кг × ${item.r} <span class="date">(${item.date})</span></div>
-                    </div>
-                `;
-            });
-
-            if(workouts.length > 0) {
-                document.getElementById('history-list').innerHTML = historyHTML;
-            } else {
-                document.getElementById('history-list').innerHTML = '<p style="opacity: 0.5;">Пока пусто...</p>';
-            }
-        }
-
-        // 4. Функция сброса (для тестов)
-        function clearData() {
-            tg.showConfirm("Точно удалить весь прогресс?", function(ok) {
+        // Удаление одной записи
+        function deleteItem(id) {
+            tg.showConfirm("Удалить эту запись?", (ok) => {
                 if(ok) {
-                    localStorage.removeItem('train_log_v1');
-                    workouts = [];
+                    workouts = workouts.filter(item => item.id !== id);
+                    updateStorage();
                     renderInterface();
                 }
             });
         }
 
+        function updateStorage() {
+            localStorage.setItem('train_log_v1', JSON.stringify(workouts));
+        }
+
+        function clearData() {
+            tg.showConfirm("Удалить ВСЮ историю?", (ok) => {
+                if(ok) {
+                    localStorage.removeItem('train_log_v1');
+                    workouts = [];
+                    renderInterface();
+                    document.getElementById('coach-msg').innerText = "";
+                }
+            });
+        }
+
+        function renderInterface() {
+            // 1. Считаем общий тоннаж (Сумма всех подходов)
+            let totalVol = workouts.reduce((sum, item) => sum + (item.vol || 0), 0);
+            
+            // Красиво форматируем числа (1000 -> 1 000)
+            document.getElementById('total-tonnage').innerText = totalVol.toLocaleString();
+            document.getElementById('train-count').innerText = workouts.length;
+
+            // 2. Отрисовка списка
+            let listHTML = "";
+            workouts.slice(0, 10).forEach(item => {
+                // Если запись старая и нет объема, считаем на лету
+                let v = item.vol || (item.w * item.r); 
+                
+                listHTML += `
+                    <div class="history-item">
+                        <div>
+                            <b>${item.name}</b><br>
+                            <span style="opacity:0.7">${item.w}кг × ${item.r}</span> 
+                            <span style="color: #3390ec; font-size: 12px; margin-left: 5px;">(Σ ${v}кг)</span>
+                        </div>
+                        <button class="del-btn" onclick="deleteItem(${item.id})">🗑</button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('history-list').innerHTML = listHTML || '<p style="opacity: 0.5;">История пуста</p>';
+        }
     </script>
 </body>
 </html>
