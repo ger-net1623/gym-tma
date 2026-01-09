@@ -2,64 +2,60 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IronPath - Final Release</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>IronPath - Gold Master</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { 
-            --tg-bg: var(--tg-theme-bg-color, #1a1a1a);
+            --tg-bg: var(--tg-theme-bg-color, #121212);
             --tg-text: var(--tg-theme-text-color, #ffffff);
-            --tg-hint: var(--tg-theme-hint-color, #aaaaaa);
-            --tg-link: var(--tg-theme-link-color, #3390ec);
-            --tg-btn: var(--tg-theme-button-color, #3390ec);
+            --tg-hint: var(--tg-theme-hint-color, #9ca3af);
+            --tg-link: var(--tg-theme-link-color, #3b82f6);
+            --tg-btn: var(--tg-theme-button-color, #3b82f6);
             --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
-            --tg-secondary: var(--tg-theme-secondary-bg-color, #2b2b2b);
+            --tg-secondary: var(--tg-theme-secondary-bg-color, #1f2937);
             
-            --green: #4ade80;
+            --green: #10b981;
             --red: #ef4444;
-            --gold: #fbbf24;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
         }
 
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: var(--tg-bg); 
-            color: var(--tg-text); 
-            margin: 0; padding: 16px;
-            max-width: 600px; margin: 0 auto; 
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
+            background: var(--tg-bg); color: var(--tg-text); 
+            margin: 0; padding: 16px; max-width: 600px; margin: 0 auto; 
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
 
-        .screen { display: none; animation: fadeIn 0.3s ease-out; }
+        .screen { display: none; animation: fade 0.3s ease-out; }
         .active-screen { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .card { 
-            background: var(--tg-secondary); 
-            padding: 20px; 
-            border-radius: 20px; 
-            margin-bottom: 16px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: var(--tg-secondary); padding: 20px; 
+            border-radius: 20px; margin-bottom: 16px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; }
-        p { color: var(--tg-hint); font-size: 14px; line-height: 1.4; margin-bottom: 15px; }
+        h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; letter-spacing: -0.5px; }
+        p { color: var(--tg-hint); font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
 
         .btn { 
-            width: 100%; padding: 16px; border: none; border-radius: 14px; 
-            font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.2s;
+            width: 100%; padding: 14px; border: none; border-radius: 14px; 
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
             display: flex; align-items: center; justify-content: center;
         }
         .btn-primary { background: var(--tg-btn); color: var(--tg-btn-text); }
-        .btn-success { background: var(--green); color: #000; }
-        .btn-outline { background: transparent; border: 1px solid var(--tg-hint); color: var(--tg-hint); font-size: 13px; margin-top: 10px; padding: 10px; }
-        .btn:active { transform: scale(0.98); opacity: 0.8; }
+        .btn-success { background: var(--green); color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--tg-hint); color: var(--tg-hint); font-size: 13px; }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
 
         input, select { 
             width: 100%; padding: 14px; margin-bottom: 12px; 
             background: var(--tg-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; 
-            color: var(--tg-text); font-size: 16px; box-sizing: border-box;
-            outline: none;
+            color: var(--tg-text); font-size: 16px; box-sizing: border-box; outline: none;
+            -webkit-appearance: none;
         }
         input:focus { border-color: var(--tg-link); }
 
@@ -68,30 +64,31 @@
         .stat-label { font-size: 10px; text-transform: uppercase; color: var(--tg-hint); margin-top: 4px; }
 
         .char-container { text-align: center; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
-        .char-icon { font-size: 64px; display: block; margin-bottom: 5px; animation: pulse 3s infinite; }
-        .hint-block {
-            color: var(--gold); font-size: 12px; margin: 10px 0;
-            background: rgba(251, 191, 36, 0.1); padding: 10px;
-            border-radius: 8px; border-left: 3px solid var(--gold); display: block;
-        }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .char-icon { font-size: 72px; display: block; margin-bottom: 5px; animation: bounce 3s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         
-        .xp-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 8px; overflow: hidden; position: relative; }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--tg-link), #8b5cf6); width: 0%; transition: width 0.5s; }
+        .xp-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--tg-link), var(--purple)); width: 0%; transition: width 0.5s; }
 
         .list-item { 
             padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); 
             display: flex; justify-content: space-between; align-items: center;
         }
         .del-btn { 
-            color: var(--red); padding: 5px 10px; font-size: 18px; cursor: pointer; 
+            color: var(--red); padding: 6px 10px; font-size: 14px; cursor: pointer; 
             background: rgba(239, 68, 68, 0.1); border-radius: 8px; margin-left: 10px;
         }
 
         .diff-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-top: 5px; background: rgba(255,255,255,0.1);}
-        .diff-pos { background: rgba(74, 222, 128, 0.2); color: var(--green); }
+        .diff-pos { background: rgba(16, 185, 129, 0.2); color: var(--green); }
         .diff-neg { background: rgba(239, 68, 68, 0.2); color: var(--red); }
         
+        .hint-block {
+            color: var(--gold); font-size: 12px; margin: 10px 0;
+            background: rgba(245, 158, 11, 0.1); padding: 10px;
+            border-radius: 8px; border-left: 3px solid var(--gold); display: none;
+        }
+        .hint-block.visible { display: block; }
         .hidden { display: none !important; }
         .input-row { display: flex; gap: 10px; }
         .input-group { flex: 1; }
@@ -103,19 +100,18 @@
     <div id="screen-onboarding" class="screen">
         <div class="card" style="text-align: center; padding-top: 40px; min-height: 300px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-                <div style="font-size: 60px; margin-bottom: 20px;">⚔️</div>
-                <h2>Добро пожаловать</h2>
-                <p>IronPath — RPG-трекер твоих тренировок.</p>
-                <p>Каждая капля пота превращается в XP. Пройди путь от "Новичка" до "Короля Железа".</p>
+                <div style="font-size: 70px; margin-bottom: 20px;">🛡️</div>
+                <h2>Путь Железа</h2>
+                <p>Твой личный RPG-дневник.</p>
+                <p>Здесь нет случайных чисел. Каждое повторение — это опыт. Каждая тренировка — уровень.</p>
             </div>
-            <button class="btn btn-primary" onclick="showScreen('screen-profile')">Создать бойца</button>
+            <button class="btn btn-primary" onclick="showScreen('screen-profile')">Начать путь</button>
         </div>
     </div>
 
     <div id="screen-profile" class="screen">
         <div class="card">
-            <h2>Данные бойца</h2>
-            <p>Влияют на точность расчета калорий и силы.</p>
+            <h2>Паспорт атлета</h2>
             <div class="input-row">
                 <div class="input-group">
                     <label class="input-label">Вес (кг)</label>
@@ -139,14 +135,14 @@
                     </select>
                 </div>
             </div>
-            <label class="input-label">Главная цель</label>
+            <label class="input-label">Цель</label>
             <select id="prof-goal">
                 <option value="strength">Сила (Пауэрлифтинг) 💪</option>
                 <option value="muscle">Гипертрофия (Масса) 🏋️</option>
-                <option value="health">Здоровье / Тонус 🫀</option>
-                <option value="fatloss">Сжигание жира 🔥</option>
+                <option value="health">Здоровье и Тонус 🫀</option>
+                <option value="fatloss">Рельеф / Похудение 🔥</option>
             </select>
-            <button class="btn btn-primary" style="margin-top: 10px;" onclick="saveProfile()">Начать игру</button>
+            <button class="btn btn-primary" style="margin-top: 10px;" onclick="saveProfile()">Создать</button>
         </div>
     </div>
 
@@ -169,11 +165,11 @@
         </div>
 
         <div class="card">
-            <h3>Добавить активность</h3>
+            <h3>Запись подхода</h3>
             <select id="select-cat" onchange="updateExList()">
-                <option value="legs">Ноги / Ягодицы</option>
                 <option value="chest">Грудь</option>
                 <option value="back">Спина</option>
+                <option value="legs">Ноги</option>
                 <option value="shoulders">Плечи</option>
                 <option value="arms">Руки</option>
                 <option value="abs">Пресс / Кор</option>
@@ -181,11 +177,10 @@
             </select>
             <select id="select-ex" onchange="adaptInputs()"></select>
             
-            <div id="hint-unilateral" class="hint-block hidden">
-                🦵 Упражнение на одну сторону. Вводи повторы для <b>одной</b> ноги/руки. Система сама посчитает объем за две.
-            </div>
-            <div id="hint-dumbbell" class="hint-block hidden">
-                🏋️‍♂️ Вводи вес <b>одной</b> гантели. Система сама удвоит тоннаж.
+            <div id="hints-container">
+                <div id="hint-unilateral" class="hint-block">🦵 Упражнение на одну сторону. Вводи повторы для одной ноги/руки.</div>
+                <div id="hint-dumbbell" class="hint-block">🏋️‍♂️ Вводи вес одной гантели. Система сама удвоит тоннаж.</div>
+                <div id="hint-bodyweight" class="hint-block">⚖️ Свой вес. Укажи доп. вес (или 0).</div>
             </div>
 
             <div id="input-container-strength" class="input-row">
@@ -201,13 +196,12 @@
 
             <div id="input-container-cardio" class="hidden">
                 <label class="input-label">Интенсивность</label>
-                <select id="input-cardio-intensity">
-                    </select>
+                <select id="input-cardio-intensity"></select>
                 <label class="input-label">Время (минуты)</label>
                 <input type="number" id="input-cardio-time" placeholder="Мин" inputmode="numeric">
             </div>
 
-            <button class="btn btn-primary" style="margin-top:12px;" onclick="addSet()">Записать подход</button>
+            <button class="btn btn-primary" style="margin-top:12px;" onclick="addSet()">Записать</button>
         </div>
 
         <div id="current-session-block" class="card hidden">
@@ -218,8 +212,8 @@
 
         <div class="card">
             <h3 style="font-size:14px; opacity:0.7">История битв</h3>
-            <div id="history-list"></div>
-            <button class="btn btn-outline" style="border-color: var(--red); color: var(--red);" onclick="safeReset()">🧨 Полный сброс прогресса</button>
+            <div id="history-list" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-outline" style="border-color: var(--red); color: var(--red); margin-top:15px; width:100%" onclick="safeReset()">🧨 Сброс всего прогресса</button>
         </div>
     </div>
 
@@ -235,13 +229,13 @@
             </div>
 
             <div class="stat-grid">
-                <div><div class="stat-val" id="res-vol">0</div><div class="stat-label">Объем (кг)</div></div>
+                <div><div class="stat-val" id="res-vol">0</div><div class="stat-label">Объем</div></div>
                 <div><div class="stat-val" id="res-kcal">0</div><div class="stat-label">Ккал</div></div>
                 <div><div class="stat-val" id="res-time">0</div><div class="stat-label">Мин</div></div>
             </div>
 
             <div id="res-msg" style="margin: 15px 0; font-size: 14px; font-style: italic; color: var(--tg-hint);"></div>
-            <div id="res-tip" class="hint-block" style="text-align: left; margin-top: 15px; background: rgba(59, 130, 246, 0.1); border-color: var(--tg-link); color: var(--tg-text);"></div>
+            <div id="res-tip" class="hint-block" style="display:block; text-align: left; margin-top: 15px; background: rgba(59, 130, 246, 0.1); border-color: var(--tg-link); color: var(--tg-text);"></div>
             
             <button class="btn btn-primary" style="margin-top: 20px;" onclick="closeResult()">В меню</button>
         </div>
@@ -251,113 +245,59 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        /* --- БД УПРАЖНЕНИЙ (v1.6 FINAL) --- 
-           [Название, MET_Active, Тип, МножительНагрузки]
-           Типы: 0=Сила, 1=СвойВес, 2=Статика, 3=Кардио
-           Множитель: 
-             1 = Штанга/Блок (один вес на все)
-             2 = Гантели (вес одной × 2) ИЛИ Односторонние (левая+правая) */
-        
+        // 1 - База (Свой вес), 2 - Статика (сек), 0 - Обычное
         const EX_DB = {
             legs: [
-                ["Приседания (Штанга)", 5.5, 0, 1],
-                ["Приседания (Гантель/Кубок)", 5.0, 0, 2],
-                ["Жим ногами", 4.5, 0, 1],
-                ["Становая тяга", 6.0, 0, 1],
-                ["Румынская тяга (RDL)", 5.5, 0, 1],
-                ["Выпады (Гантели)", 5.0, 0, 2], // 2 - т.к. делаем на обе ноги
-                ["Выпады (Свой вес)", 4.0, 1, 0],
-                ["Болгарские приседания", 5.5, 0, 2], // 2 - т.к. делаем на обе ноги
-                ["Разгибание ног", 3.5, 0, 1],
-                ["Сгибание ног", 3.5, 0, 1]
+                ["Приседания (Штанга)", 6.0, 0, 1], ["Приседания (Гантель/Кубок)", 5.5, 0, 2],
+                ["Жим ногами", 5.0, 0, 1], ["Становая тяга", 7.0, 0, 1], ["Румынская тяга", 6.0, 0, 1],
+                ["Выпады (Гантели)", 5.5, 0, 2], ["Выпады (Свой вес)", 4.5, 1, 0],
+                ["Болгарские приседания", 6.5, 0, 2], ["Разгибание ног", 3.5, 0, 1], ["Сгибание ног", 3.5, 0, 1]
             ],
             back: [
-                ["Подтягивания", 5.0, 1, 0],
-                ["Тяга штанги в наклоне", 5.5, 0, 1],
-                ["Тяга верхнего блока", 4.0, 0, 1],
-                ["Тяга гантели (одной рукой)", 4.5, 0, 2], // 2 - т.к. левая+правая
-                ["Тяга нижнего блока", 4.0, 0, 1],
-                ["Гиперэкстензия", 3.5, 1, 0]
+                ["Подтягивания", 5.0, 1, 0], ["Тяга штанги в наклоне", 6.0, 0, 1],
+                ["Тяга верхнего блока", 4.0, 0, 1], ["Тяга нижнего блока", 4.0, 0, 1],
+                ["Тяга гантели (одной рукой)", 4.5, 0, 2], ["Гиперэкстензия", 3.5, 1, 0], ["Пуловер", 3.5, 0, 1]
             ],
             chest: [
-                ["Жим лежа (Штанга)", 5.0, 0, 1],
-                ["Жим гантелей лежа", 5.0, 0, 2],
-                ["Жим под углом (Штанга)", 5.0, 0, 1],
-                ["Жим под углом (Гантели)", 5.0, 0, 2],
-                ["Отжимания", 4.0, 1, 0],
-                ["Отжимания на брусьях", 5.0, 1, 0],
-                ["Сведение рук (Бабочка)", 3.0, 0, 1]
+                ["Жим лежа (Штанга)", 5.5, 0, 1], ["Жим гантелей лежа", 5.5, 0, 2],
+                ["Жим под углом (Штанга)", 5.5, 0, 1], ["Жим под углом (Гантели)", 5.5, 0, 2],
+                ["Отжимания", 4.0, 1, 0], ["Брусья", 5.0, 1, 0], ["Бабочка", 3.0, 0, 1]
             ],
             shoulders: [
-                ["Армейский жим (Штанга)", 5.0, 0, 1],
-                ["Жим гантелей сидя", 5.0, 0, 2],
-                ["Махи гантелями в стороны", 3.5, 0, 2],
-                ["Махи в наклоне", 3.5, 0, 2]
+                ["Армейский жим", 5.0, 0, 1], ["Жим гантелей сидя", 5.0, 0, 2],
+                ["Махи в стороны", 3.5, 0, 2], ["Махи в наклоне", 3.5, 0, 2], ["Тяга к лицу", 3.5, 0, 1]
             ],
             arms: [
-                ["Подъем штанги на бицепс", 3.5, 0, 1],
-                ["Подъем гантелей (Бицепс)", 3.5, 0, 2],
-                ["Молотки", 3.5, 0, 2],
-                ["Французский жим", 3.5, 0, 1],
-                ["Разгибание на блоке", 3.0, 0, 1]
+                ["Подъем на бицепс (Шт)", 3.5, 0, 1], ["Подъем гантелей (Биц)", 3.5, 0, 2], ["Молотки", 3.5, 0, 2],
+                ["Французский жим", 3.5, 0, 1], ["Разгибание на блоке", 3.0, 0, 1]
             ],
             abs: [
-                ["Скручивания", 3.0, 1, 0],
-                ["Подъем ног в висе", 4.0, 1, 0],
-                ["Планка", 3.5, 2, 0],
-                ["Русский твист", 3.5, 1, 0]
+                ["Скручивания", 3.0, 1, 0], ["Подъем ног", 4.0, 1, 0], 
+                ["Планка", 3.5, 2, 0], ["Русский твист", 3.5, 1, 0]
             ],
             cardio: [
-                ["Бег", 9.0, 3, 0],
-                ["Ходьба", 3.5, 3, 0],
-                ["Эллипс", 6.0, 3, 0],
-                ["Велотренажер", 6.0, 3, 0],
-                ["Гребля", 8.0, 3, 0]
+                ["Бег", 9.0, 3, 0], ["Ходьба", 3.5, 3, 0], ["Эллипс", 6.0, 3, 0],
+                ["Велотренажер", 6.0, 3, 0], ["Гребля", 8.0, 3, 0]
             ]
         };
 
         const LEVELS = [
-            { xp: 0, icon: "🥚", rank: "Яйцо" },
-            { xp: 500, icon: "🐣", rank: "Новичок" },
-            { xp: 1500, icon: "🐥", rank: "Любитель" },
-            { xp: 4000, icon: "🐓", rank: "Боец" },
-            { xp: 10000, icon: "🐗", rank: "Атлет" },
-            { xp: 25000, icon: "🦍", rank: "Машина" },
-            { xp: 60000, icon: "🦖", rank: "Титан" },
-            { xp: 150000, icon: "👑", rank: "Король Железа" }
+            { xp: 0, icon: "🥚", rank: "Яйцо" }, { xp: 500, icon: "🐣", rank: "Новичок" },
+            { xp: 1500, icon: "🐥", rank: "Любитель" }, { xp: 4000, icon: "🐓", rank: "Боец" },
+            { xp: 10000, icon: "🐗", rank: "Атлет" }, { xp: 25000, icon: "🦍", rank: "Машина" },
+            { xp: 60000, icon: "🦖", rank: "Титан" }, { xp: 150000, icon: "👑", rank: "Король" }
         ];
 
-        // Умные советы по целям
         const TIPS = {
-            strength: [
-                "Для силы отдыхай 3-5 минут между тяжелыми сетами.",
-                "База (присед, жим, тяга) — 80% твоего успеха в силе.",
-                "Прогрессия весов важнее, чем ощущение 'пампа'.",
-                "Не бойся низкого числа повторений (3-5) для силы."
-            ],
-            muscle: [
-                "Для объема важен контроль фазы опускания (негатива).",
-                "Старайся чувствовать работающую мышцу, а не просто перемещать вес.",
-                "Диапазон 8-12 повторений — классика для гипертрофии.",
-                "Ешь достаточно белка (1.6-2г на кг веса) для роста."
-            ],
-            fatloss: [
-                "Дефицит калорий — основа, тренировки лишь помогают тратить больше.",
-                "Силовые на диете сохраняют мышцы, не бросай их ради кардио.",
-                "Активность вне зала (шаги) сжигает больше, чем кажется.",
-                "Пей воду перед едой, это помогает контролировать аппетит."
-            ],
-            health: [
-                "Регулярность важнее рекордов. Лучше часто понемногу.",
-                "Разминка обязательна, чтобы суставы сказали спасибо через 10 лет.",
-                "Слушай тело: боль в суставе — сигнал стоп.",
-                "Сон — лучшее лекарство и восстановитель."
-            ]
+            strength: ["Отдых 3-5 мин — это не лень, это биохимия.", "База — 80% успеха.", "Прогрессия нагрузок = рост."],
+            muscle: ["Контролируй негативную фазу.", "Мышца не знает цифр, она знает напряжение.", "Диапазон 8-12 идеален для объема."],
+            fatloss: ["Питание — 80% успеха.", "Силовые сохраняют мышцы при дефиците.", "Активность (шаги) важнее часа в зале."],
+            health: ["Главное — регулярность.", "Разминка продлевает спортивное долголетие.", "Боль в суставе — стоп сигнал."]
         };
 
         const CARDIO_INTENSITY = {
             default: { 3: "Легкая (Разминка)", 6: "Средняя (Пот)", 9: "Высокая (Тяжело)", 11: "Максимум" },
-            walk: { 3: "Прогулка", 5: "Бодрый шаг", 7: "В гору / Очень быстро" }
+            walk: { 3: "Прогулка", 5: "Бодрый шаг", 7: "В гору / Спешка" }
         };
 
         let profile = JSON.parse(localStorage.getItem('ip_profile'));
@@ -369,13 +309,8 @@
 
         function init() {
             tg.ready();
-            if (!profile) {
-                showScreen('screen-onboarding');
-            } else {
-                showScreen('screen-main');
-                updateExList();
-                renderMain();
-            }
+            if (!profile) showScreen('screen-onboarding');
+            else { showScreen('screen-main'); updateExList(); renderMain(); }
         }
 
         function updateExList() {
@@ -390,156 +325,119 @@
             const exIdx = document.getElementById('select-ex').value;
             const [name, met, type, multiplier] = EX_DB[cat][exIdx];
 
-            const strContainer = document.getElementById('input-container-strength');
-            const cardioContainer = document.getElementById('input-container-cardio');
-            const hintDumbbell = document.getElementById('hint-dumbbell');
-            const hintUnilateral = document.getElementById('hint-unilateral');
-            const labelW = document.getElementById('label-w');
-            const labelR = document.getElementById('label-r');
-
+            const strBlock = document.getElementById('input-container-strength');
+            const cardioBlock = document.getElementById('input-container-cardio');
+            
+            document.querySelectorAll('.hint-block').forEach(el => el.classList.remove('visible'));
             document.getElementById('input-w').value = '';
             document.getElementById('input-r').value = '';
-            
-            hintDumbbell.classList.add('hidden');
-            hintUnilateral.classList.add('hidden');
 
-            if (type === 3) { // Кардио
-                strContainer.classList.add('hidden');
-                cardioContainer.classList.remove('hidden');
-                
-                const intensitySelect = document.getElementById('input-cardio-intensity');
+            if (type === 3) { 
+                strBlock.classList.add('hidden');
+                cardioBlock.classList.remove('hidden');
+                const iSelect = document.getElementById('input-cardio-intensity');
                 const iMap = name.includes('Ходьба') ? CARDIO_INTENSITY.walk : CARDIO_INTENSITY.default;
-                intensitySelect.innerHTML = Object.entries(iMap).map(([val, txt]) => 
+                iSelect.innerHTML = Object.entries(iMap).map(([val, txt]) => 
                     `<option value="${val}" ${val==6?'selected':''}>${txt}</option>`
                 ).join('');
-
-            } else { // Силовые
-                strContainer.classList.remove('hidden');
-                cardioContainer.classList.add('hidden');
+            } else {
+                strBlock.classList.remove('hidden');
+                cardioBlock.classList.add('hidden');
                 
-                // Логика подсказок
-                const isLegsUnilateral = (cat === 'legs' && multiplier === 2 && !name.includes('Гантель')); // Болгарские и тд
-                const isDumbbell = (name.toLowerCase().includes('гантел'));
+                // Умные подсказки (стакаются)
+                if (name.toLowerCase().includes('гантел') || name.includes('Молотки')) 
+                    document.getElementById('hint-dumbbell').classList.add('visible');
+                
+                if ((cat === 'legs' || cat === 'back') && multiplier === 2 && !name.includes('Гантел'))
+                    document.getElementById('hint-unilateral').classList.add('visible');
+                
+                if (type === 1) document.getElementById('hint-bodyweight').classList.add('visible');
 
-                if (isLegsUnilateral) hintUnilateral.classList.remove('hidden');
-                else if (isDumbbell && multiplier === 2) hintDumbbell.classList.remove('hidden');
-
-                if (type === 2) { 
-                    labelW.innerText = "Доп. вес (кг)";
-                    labelR.innerText = "Время (сек)";
-                } else if (type === 1) { 
-                    labelW.innerText = "Доп. вес (кг)";
-                    labelR.innerText = "Повторы";
-                } else {
-                    labelW.innerText = "Вес (кг)";
-                    labelR.innerText = "Повторы";
-                }
+                const lW = document.getElementById('label-w');
+                const lR = document.getElementById('label-r');
+                lW.innerText = (type === 2 || type === 1) ? "Доп. вес (кг)" : "Вес (кг)";
+                lR.innerText = (type === 2) ? "Время (сек)" : "Повторы";
             }
         }
 
-        function saveProfile() {
-            const w = parseFloat(document.getElementById('prof-weight').value);
-            const h = parseFloat(document.getElementById('prof-height').value);
-            const a = parseFloat(document.getElementById('prof-age').value);
-            
-            if (!w || w < 30 || !h || !a) return tg.showAlert("Заполни все поля корректно!");
-            
-            profile = { 
-                weight: w, height: h, age: a,
-                gender: document.getElementById('prof-gender').value,
-                goal: document.getElementById('prof-goal').value
-            };
-            
-            localStorage.setItem('ip_profile', JSON.stringify(profile));
-            showScreen('screen-main');
-            updateExList();
-            renderMain();
-        }
-
-        function saveSession() {
-            localStorage.setItem('ip_current', JSON.stringify(currentSession));
+        function getBMR() {
+            let s = (profile.gender === 'male') ? 5 : -161;
+            return 10 * profile.weight + 6.25 * profile.height - 5 * profile.age + s;
         }
 
         function addSet() {
             const cat = document.getElementById('select-cat').value;
             const exIdx = document.getElementById('select-ex').value;
-            const [name, metActivity, type, multiplier] = EX_DB[cat][exIdx];
+            const [name, metBase, type, multiplier] = EX_DB[cat][exIdx];
             
             let w = 0, r = 0, kcal = 0, vol = 0, xp = 0;
-            
-            // Расчет Кардио
-            if (type === 3) { 
+            const bmrPerMin = getBMR() / 1440; 
+
+            if (type === 3) { // Кардио
                 const intensity = parseFloat(document.getElementById('input-cardio-intensity').value);
                 const duration = parseFloat(document.getElementById('input-cardio-time').value);
                 if (!duration) return tg.showAlert("Укажи время!");
                 
-                // Формула Кардио: MET * Вес * Часы
-                kcal = intensity * profile.weight * (duration / 60);
-                vol = 0; 
-                xp = Math.round(kcal * 1.2); 
+                // Исправлено: минуты в формуле
+                kcal = (intensity * profile.weight / 60) * duration;
+                xp = Math.round(kcal * 1.2);
                 r = duration; 
-                w = 0;
 
-            } else { // СИЛОВЫЕ / СТАТИКА
+            } else { // Силовые
                 w = parseFloat(document.getElementById('input-w').value) || 0;
                 r = parseFloat(document.getElementById('input-r').value);
-                if (!r) return tg.showAlert("Укажи повторы/время!");
+                if (!r) return tg.showAlert("Укажи повторы!");
 
-                // 1. Расчет объема (Tonnage)
+                // Реальный тоннаж ("железный")
                 let load = w;
-                if (type === 1) load = 0; // Свой вес = 0 кг в тоннаже
+                if (type === 1) load = 0; 
+                if (multiplier === 2) load = w * 2;
                 
-                // Если множитель 2 (гантели или две ноги отдельно), удваиваем объем
-                if (multiplier === 2) load = w * 2; 
+                // Виртуальный объем (для XP и EPOC)
+                // Исправлено: статика теперь приводится к повторам (1 реп ~ 5 сек)
+                let bodyFactor = profile.weight * 0.7; // ~70% веса тела
+                let virtualRepLoad = (type === 2) ? (r / 5) : r; 
+                let virtualLoadWeight = load + (type === 1 || type === 2 ? bodyFactor : 0);
+                
+                let virtualVol = virtualLoadWeight * virtualRepLoad;
+                vol = (type === 2) ? 0 : (load * r);
 
-                if (type === 2) { // Статика (Планка)
-                    // Виртуальный объем для планки: (Вес + 60% тела) * (сек / 10)
-                    let effectiveWeight = w + (profile.weight * 0.6); 
-                    vol = Math.round(effectiveWeight * (r / 10)); 
-                } else {
-                    vol = load * r;
-                }
+                // --- Калории (Gold Master Math) ---
+                // Динамический MET: если > 20 повторов, это уже аэробика
+                let finalMet = (r > 20) ? metBase + 1.5 : metBase;
                 
-                // 2. Расчет Калорий (НОВАЯ ФОРМУЛА v1.6)
-                // Считаем не время под нагрузкой, а время "сета" (выполнение + отдых)
-                // Средний сет занимает 2.5 минуты (включая отдых)
-                // Если упражнение одностороннее (Болгарские), то сет в 2 раза длиннее (левая + правая)
+                // Время под нагрузкой (в минутах)
+                let workTimeMin = (type === 2) ? (r / 60) : (r * 4.5 / 60);
                 
-                let setDurationMin = 2.5; 
-                if (multiplier === 2 && !name.includes('Гантел')) setDurationMin = 4.0; // Односторонние ноги дольше
-                if (type === 2) setDurationMin = (r / 60) + 0.5; // Статика: время + отдых
+                // Время отдыха (в минутах)
+                let restTimeMin = (r < 6) ? 2.5 : 1.5; 
+                if (type === 2) restTimeMin = 1.0; 
+
+                // Расчет
+                // 1. Работа: MET * кг * часы -> переводим в минуты: (MET * кг / 60) * мин
+                let workBurn = (finalMet * profile.weight / 60) * workTimeMin;
                 
-                // Расход = (MET упражнения * Вес * Время_сета_в_часах)
-                let activityBurn = metActivity * profile.weight * (setDurationMin / 60);
+                // 2. Отдых: BMR/мин * минуты отдыха
+                let restBurn = bmrPerMin * restTimeMin;
                 
-                // Бонус за тяжесть (Volume Load Factor)
-                // Тяжелый присед (100кг) тратит больше энергии на восстановление, чем легкий (20кг)
-                let loadBonus = vol / 100; // 1000кг объема добавит 10 ккал
+                // 3. EPOC (бонус за тяжесть)
+                let liftBonus = virtualVol / 200; 
                 
-                kcal = activityBurn + loadBonus;
+                kcal = (workBurn + restBurn + liftBonus) * 1.05; // 5% запас
                 
-                // XP
-                xp = Math.round((vol / 20) + (kcal * 2.5));
-                if (type === 2) xp = Math.min(xp, 150); // Нерф статики, чтобы не фармили на планке
-                if (xp > 400) xp = 400; // Cap
+                xp = Math.round((virtualVol / 30) + (kcal * 2.5));
+                if (xp > 600) xp = 600; // Cap
             }
 
-            currentSession.unshift({ 
-                id: Date.now(), 
-                name, vol, kcal: Math.round(kcal), xp, w, r, type, multiplier 
-            });
-            
+            currentSession.unshift({ id: Date.now(), name, vol, kcal: Math.round(kcal), xp, w, r, type });
             saveSession();
             tg.HapticFeedback.impactOccurred('medium');
             renderMain();
             
-            if (type !== 3) document.getElementById('input-r').value = '';
-        }
-
-        function deleteSet(id) {
-            currentSession = currentSession.filter(s => s.id !== id);
-            saveSession();
-            renderMain();
+            if (type !== 3) {
+                document.getElementById('input-w').value = '';
+                document.getElementById('input-r').value = '';
+            }
         }
 
         function finishWorkout() {
@@ -548,37 +446,32 @@
             const vol = currentSession.reduce((a, c) => a + c.vol, 0);
             const kcal = currentSession.reduce((a, c) => a + c.kcal, 0);
             let xp = currentSession.reduce((a, c) => a + c.xp, 0);
-            
-            xp = Math.min(xp, 2000); // Глобальный лимит за тренировку
+            xp = Math.min(xp, 3000); 
 
-            // Расчет времени
-            let totalMinutes = 0;
-            let isCardioSession = true;
-            
+            // Определение типа
+            let cardioMins = 0, strengthSets = 0;
             currentSession.forEach(s => {
-                if (s.type === 3) {
-                    totalMinutes += s.r;
-                } else {
-                    isCardioSession = false;
-                    // Время считаем по той же логике "сетов"
-                    if (s.multiplier === 2 && !s.name.includes('Гантел')) totalMinutes += 4;
-                    else if (s.type === 2) totalMinutes += (s.r/60) + 1;
-                    else totalMinutes += 2.5;
-                }
+                if (s.type === 3) cardioMins += s.r;
+                else strengthSets++;
             });
 
-            // Сравнение с прошлым (FIX: Поиск последней подходящей)
+            let sessionType = 'strength'; 
+            if (strengthSets === 0) sessionType = 'cardio';
+            else if (cardioMins > 15 && strengthSets > 3) sessionType = 'hybrid';
+
+            let totalTime = Math.round(cardioMins + (strengthSets * 3)); 
+
+            // Сравнение (безопасное)
             let diffPercent = 0;
             let diffType = 'neutral';
             
-            // Сначала ищем в истории
             if (history.length > 0) {
-                // history отсортирован Newest -> Oldest. find найдет самую свежую.
-                const prev = history.find(h => h.isCardio === isCardioSession);
-                
+                // Ищем запись такого же типа (fallback на strength для старых записей)
+                const prev = history.find(h => (h.type || 'strength') === sessionType);
                 if (prev) {
-                    let currVal = isCardioSession ? kcal : vol;
-                    let prevVal = isCardioSession ? prev.kcal : prev.vol;
+                    let metric = (sessionType === 'strength') ? 'vol' : 'xp'; 
+                    let currVal = (sessionType === 'strength') ? vol : xp;
+                    let prevVal = (sessionType === 'strength') ? prev.vol : prev.xp;
                     
                     if (prevVal > 0) {
                         diffPercent = ((currVal - prevVal) / prevVal) * 100;
@@ -591,8 +484,7 @@
             const record = {
                 date: Date.now(),
                 dateStr: new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'short'}),
-                vol, kcal, xp, time: Math.round(totalMinutes),
-                isCardio: isCardioSession
+                vol, kcal, xp, time: totalTime, type: sessionType
             };
             
             history.unshift(record);
@@ -603,36 +495,65 @@
             localStorage.removeItem('ip_current');
             currentSession = [];
 
-            // Рендер результата
+            // UI Результат
             document.getElementById('res-xp').innerText = `+${xp} XP`;
-            document.getElementById('res-vol').innerText = vol;
+            // Улучшенный дисплей объема
+            let volDisplay = vol;
+            if (sessionType === 'cardio') volDisplay = "Кардио";
+            else if (vol === 0 && sessionType === 'strength') volDisplay = "Статика";
+            document.getElementById('res-vol').innerText = volDisplay;
+            
             document.getElementById('res-kcal').innerText = Math.round(kcal);
-            document.getElementById('res-time').innerText = Math.round(totalMinutes);
+            document.getElementById('res-time').innerText = totalTime;
             
-            // Совет дня (FIX: по цели)
-            const goalKey = profile.goal || 'health';
-            const tipsArr = TIPS[goalKey] || TIPS['health'];
-            document.getElementById('res-tip').innerText = "💡 Совет: " + tipsArr[Math.floor(Math.random() * tipsArr.length)];
+            const tipsArr = TIPS[profile.goal] || TIPS['health'];
+            document.getElementById('res-tip').innerHTML = "💡 <b>Совет:</b> " + tipsArr[Math.floor(Math.random() * tipsArr.length)];
 
-            // Бейдж
             const badge = document.getElementById('res-diff-badge');
-            // Сбрасываем классы
             badge.className = 'diff-badge hidden';
-            
             if (diffType !== 'neutral') {
                 badge.classList.remove('hidden');
                 badge.classList.add(diffType === 'pos' ? 'diff-pos' : 'diff-neg');
-                badge.innerText = (diffType === 'pos' ? '▲' : '▼') + ` ${Math.abs(diffPercent).toFixed(1)}% к прошлой`;
+                badge.innerText = (diffType === 'pos' ? '▲' : '▼') + ` ${Math.abs(diffPercent).toFixed(1)}% (${sessionType})`;
             }
 
-            const msgBox = document.getElementById('res-msg');
-            if (diffType === 'neg') msgBox.innerText = "Восстановление — часть успеха. Следующая битва будет лучше.";
-            else if (diffType === 'pos') msgBox.innerText = "Отличная работа! Ты становишься сильнее.";
-            else msgBox.innerText = "Тренировка засчитана. Стабильность — признак мастерства.";
+            document.getElementById('res-msg').innerText = diffType === 'neg' 
+                ? "Восстановление важно. В следующий раз порвём!" 
+                : "Отличный прогресс! Ты становишься сильнее.";
 
             showScreen('screen-result');
             tg.HapticFeedback.notificationOccurred('success');
             renderMain();
+        }
+
+        // --- УТИЛИТЫ ---
+        function deleteSet(id) {
+            currentSession = currentSession.filter(s => s.id !== id);
+            saveSession();
+            renderMain();
+        }
+        
+        function deleteHistoryItem(index) {
+            if(confirm("Удалить запись и потерять XP?")) {
+                const item = history[index];
+                if (item.xp) totalXP = Math.max(0, totalXP - item.xp);
+                
+                history.splice(index, 1);
+                localStorage.setItem('ip_history', JSON.stringify(history));
+                localStorage.setItem('ip_xp', totalXP);
+                renderMain();
+            }
+        }
+
+        function saveSession() { localStorage.setItem('ip_current', JSON.stringify(currentSession)); }
+        function saveProfile() {
+            const w = parseFloat(document.getElementById('prof-weight').value);
+            const h = parseFloat(document.getElementById('prof-height').value);
+            const a = parseFloat(document.getElementById('prof-age').value);
+            if (!w || !h || !a) return tg.showAlert("Заполни все поля!");
+            profile = { weight: w, height: h, age: a, gender: document.getElementById('prof-gender').value, goal: document.getElementById('prof-goal').value };
+            localStorage.setItem('ip_profile', JSON.stringify(profile));
+            showScreen('screen-main'); updateExList(); renderMain();
         }
 
         function renderMain() {
@@ -640,68 +561,50 @@
             document.getElementById('stat-count').innerText = history.length;
             updateCharacter();
 
-            const curListDiv = document.getElementById('current-list');
             const curBlock = document.getElementById('current-session-block');
-            
             if (currentSession.length > 0) {
                 curBlock.classList.remove('hidden');
                 let curXP = currentSession.reduce((a,c)=>a+c.xp,0);
                 document.getElementById('session-title').innerText = `Сейчас: +${curXP} XP`;
-                
-                curListDiv.innerHTML = currentSession.map(s => `
+                document.getElementById('current-list').innerHTML = currentSession.map(s => `
                     <div class="list-item">
-                        <div>
-                            <b>${s.name}</b>
-                            <div style="font-size:12px; opacity:0.7">
-                                ${s.type === 3 ? s.r + ' мин' : 
-                                  s.type === 2 ? s.r + ' сек' : 
-                                  (s.w > 0 ? s.w + 'кг × ' : (s.type===1?'Свой вес × ':'')) + s.r}
-                            </div>
+                        <div><b>${s.name}</b><div style="font-size:12px; opacity:0.7">${s.type===3?s.r+' мин':(s.type===2?s.r+' сек':(s.w>0?s.w+'кг × ':'')+s.r)}</div></div>
+                        <div style="text-align:right">
+                            <span style="color:var(--gold); font-weight:bold">+${s.xp}</span><br><span style="font-size:10px; opacity:0.5">${s.kcal} ккал</span>
+                            <span class="del-btn" onclick="deleteSet(${s.id})">✕</span>
                         </div>
-                        <div style="text-align:right; display:flex; align-items:center;">
-                            <div>
-                                <span style="color:var(--gold); font-weight:bold; font-size:13px;">+${s.xp}</span><br>
-                                <span style="font-size:10px; opacity:0.5">${s.kcal} ккал</span>
-                            </div>
-                            <div class="del-btn" onclick="deleteSet(${s.id})">✕</div>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                curBlock.classList.add('hidden');
-            }
+                    </div>`).join('');
+            } else { curBlock.classList.add('hidden'); }
 
-            const hList = document.getElementById('history-list');
-            hList.innerHTML = history.slice(0, 3).map(h => `
-                <div class="list-item" style="font-size: 13px;">
-                    <div style="opacity: 0.8">
-                        <div>${h.dateStr}</div>
-                        <div style="font-size:10px; color:var(--tg-hint)">${h.isCardio ? 'Кардио' : 'Силовая'}</div>
+            document.getElementById('history-list').innerHTML = history.map((h, i) => {
+                // Красивое отображение в истории
+                let desc = '';
+                if (h.type === 'cardio') desc = `🏃 ${h.kcal} ккал`;
+                else if (h.vol === 0) desc = `🧘 Статика`; // Для планок
+                else desc = `🏋️ ${h.vol} кг`;
+
+                return `
+                <div class="list-item">
+                    <div style="opacity:0.8"><div>${h.dateStr}</div><div style="font-size:10px; color:var(--tg-hint)">${(h.type||'strength').toUpperCase()}</div></div>
+                    <div style="text-align:right; display:flex; align-items:center">
+                        <div style="margin-right:10px">${desc} <span style="color:var(--gold)">+${h.xp}</span></div>
+                        <div class="del-btn" onclick="deleteHistoryItem(${i})">✕</div>
                     </div>
-                    <div style="text-align:right">
-                        ${!h.isCardio ? '🏋️ ' + h.vol + ' кг' : '🏃 ' + h.kcal + ' ккал'} 
-                        <span style="color:var(--gold); margin-left:8px; font-weight:bold">+${h.xp} XP</span>
-                    </div>
-                </div>
-            `).join('') || '<div style="text-align:center; font-size:12px; opacity:0.5; padding:10px;">История пуста. Твой путь начинается!</div>';
+                </div>`
+            }).join('') || '<div style="text-align:center; opacity:0.5; padding:20px">Пока пусто. Начни тренировку!</div>';
         }
 
         function updateCharacter() {
-            let current = LEVELS[0];
-            let next = LEVELS[1];
+            let current = LEVELS[0], next = LEVELS[1];
             for (let i = 0; i < LEVELS.length; i++) {
-                if (totalXP >= LEVELS[i].xp) {
-                    current = LEVELS[i];
-                    next = LEVELS[i+1] || { xp: totalXP * 1.5, rank: "Максимум" };
-                }
+                if (totalXP >= LEVELS[i].xp) { current = LEVELS[i]; next = LEVELS[i+1] || { xp: totalXP*1.5, rank: "Максимум" }; }
             }
             document.getElementById('main-char-icon').innerText = current.icon;
             document.getElementById('main-char-rank').innerText = current.rank;
             document.getElementById('stat-lvl').innerText = LEVELS.indexOf(current) + 1;
             document.getElementById('main-char-xp').innerText = `${totalXP} XP`;
             document.getElementById('main-char-next').innerText = `Цель: ${next.xp}`;
-            const percent = Math.min(100, Math.max(0, ((totalXP - current.xp) / (next.xp - current.xp)) * 100));
-            document.getElementById('xp-fill').style.width = percent + "%";
+            document.getElementById('xp-fill').style.width = Math.min(100, ((totalXP - current.xp)/(next.xp - current.xp))*100) + "%";
         }
 
         function showScreen(id) {
@@ -709,28 +612,13 @@
             document.getElementById(id).classList.add('active-screen');
             window.scrollTo(0,0);
         }
-        
-        function closeResult() {
-            showScreen('screen-main');
-        }
-
+        function closeResult() { showScreen('screen-main'); }
         function safeReset() {
-            if (confirm("Точно удалить весь прогресс? Это действие нельзя отменить.")) {
-                localStorage.clear();
-                profile = null;
-                history = [];
-                totalXP = 0;
-                location.reload();
-            }
+            if (confirm("Удалить абсолютно всё? Это необратимо.")) { localStorage.clear(); location.reload(); }
         }
-
-        // Автосохранение при закрытии
         window.addEventListener('beforeunload', function() {
             if (currentSession.length > 0) localStorage.setItem('ip_current', JSON.stringify(currentSession));
-            localStorage.setItem('ip_history', JSON.stringify(history));
-            localStorage.setItem('ip_xp', totalXP);
         });
-
     </script>
 </body>
 </html>
