@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TrainLog MVP</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* --- СТИЛИ (Внешний вид) --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #212121); /* Цвет фона из ТГ */
+            color: var(--tg-theme-text-color, #ffffff); /* Цвет текста из ТГ */
+            margin: 0; padding: 15px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* Карточка - белый полупрозрачный блок */
+        .card {
+            background: rgba(255, 255, 255, 0.08); /* Чуть светлее фона */
+            padding: 20px; 
+            border-radius: 16px;
+            width: 100%; 
+            box-sizing: border-box; /* Чтобы отступы не ломали ширину */
+            margin-bottom: 15px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Поля ввода */
+        input {
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0;
+            box-sizing: border-box;
+            border-radius: 10px; 
+            border: 1px solid #444;
+            background: var(--tg-theme-secondary-bg-color, #333); 
+            color: var(--tg-theme-text-color, #fff);
+            font-size: 16px;
+        }
+
+        /* Главная кнопка */
+        .main-btn {
+            width: 100%; 
+            padding: 14px;
+            margin-top: 10px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none; 
+            border-radius: 10px; 
+            font-size: 16px; font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .main-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* Элемент истории */
+        .history-item {
+            display: flex; justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: left;
+            font-size: 14px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .date { font-size: 12px; opacity: 0.6; }
+
+        /* Персонаж */
+        #char-visual { font-size: 60px; margin: 10px 0; display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="char-visual">🐣</div>
+        <h2 id="status-text">Новичок</h2>
+        <p style="opacity: 0.7; margin: 5px 0;">Тренировок: <b id="train-count">0</b></p>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0;">Добавить подход</h3>
+        <input type="text" id="exercise-input" placeholder="Упражнение (напр. Жим)">
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="weight-input" placeholder="Вес (кг)">
+            <input type="number" id="reps-input" placeholder="Повторы">
+        </div>
+        <button class="main-btn" onclick="saveData()">Записать</button>
+        <button class="main-btn" onclick="clearData()" style="background-color: #ff4d4d; margin-top: 10px; font-size: 12px;">Сбросить прогресс (Тест)</button>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; text-align: left;">История (Последние 5)</h3>
+        <div id="history-list">
+            <p style="opacity: 0.5; font-size: 14px;">Пока пусто...</p>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // На весь экран
+
+        // --- ЛОГИКА ---
+        
+        // 1. Загружаем данные из памяти телефона при запуске
+        // "train_log_v1" - это ключ (как имя папки), где мы храним данные
+        let savedData = localStorage.getItem('train_log_v1');
+        let workouts = savedData ? JSON.parse(savedData) : [];
+
+        // Сразу обновляем экран, если данные уже были
+        renderInterface();
+
+        // 2. Функция сохранения (вызывается кнопкой)
+        function saveData() {
+            // Берем значения из полей
+            let exercise = document.getElementById('exercise-input').value;
+            let weight = document.getElementById('weight-input').value;
+            let reps = document.getElementById('reps-input').value;
+
+            // Проверка: если пусто, ругаемся
+            if(!exercise || !weight || !reps) {
+                tg.showAlert("Пожалуйста, заполни все поля!");
+                return;
+            }
+
+            // Создаем объект тренировки
+            let newRecord = {
+                id: Date.now(), // уникальный номер (время)
+                name: exercise,
+                w: weight,
+                r: reps,
+                date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+
+            // Добавляем в начало списка
+            workouts.unshift(newRecord);
+
+            // СОХРАНЯЕМ В ПАМЯТЬ (Самое важное!)
+            localStorage.setItem('train_log_v1', JSON.stringify(workouts));
+
+            // Вибрация успеха
+            tg.HapticFeedback.notificationOccurred('success');
+
+            // Чистим поля и обновляем экран
+            document.getElementById('exercise-input').value = "";
+            document.getElementById('weight-input').value = "";
+            document.getElementById('reps-input').value = "";
+            
+            renderInterface();
+        }
+
+        // 3. Функция отрисовки (обновляет экран на основе данных)
+        function renderInterface() {
+            // Обновляем счетчик
+            let count = workouts.length;
+            document.getElementById('train-count').innerText = count;
+
+            // Логика персонажа (Простая)
+            let char = "🐣";
+            let title = "Новичок";
+            
+            if (count >= 5) { char = "🐥"; title = "Любитель"; }
+            if (count >= 15) { char = "🐓"; title = "Опытный"; }
+            if (count >= 30) { char = "🦖"; title = "Монстр"; }
+
+            document.getElementById('char-visual').innerText = char;
+            document.getElementById('status-text').innerText = title;
+
+            // Отрисовка истории
+            let historyHTML = "";
+            // Берем только первые 5 записей
+            workouts.slice(0, 5).forEach(item => {
+                historyHTML += `
+                    <div class="history-item">
+                        <div><b>${item.name}</b></div>
+                        <div>${item.w}кг × ${item.r} <span class="date">(${item.date})</span></div>
+                    </div>
+                `;
+            });
+
+            if(workouts.length > 0) {
+                document.getElementById('history-list').innerHTML = historyHTML;
+            } else {
+                document.getElementById('history-list').innerHTML = '<p style="opacity: 0.5;">Пока пусто...</p>';
+            }
+        }
+
+        // 4. Функция сброса (для тестов)
+        function clearData() {
+            tg.showConfirm("Точно удалить весь прогресс?", function(ok) {
+                if(ok) {
+                    localStorage.removeItem('train_log_v1');
+                    workouts = [];
+                    renderInterface();
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
