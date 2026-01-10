@@ -445,30 +445,24 @@
             const [name, type, mult, flags] = EX_DB[cat][exIdx];
             
             let w = 0, r = 0, kcal = 0, vol = 0, xp = 0;
-            // Безопасный вес тела, если профиль сбился
             const safeBodyWeight = (profile && profile.weight > 0) ? parseFloat(profile.weight) : 75;
 
             if (type === 3) { // КАРДИО
                 const intensityKey = document.getElementById('input-cardio-intensity').value; 
                 const duration = parseFloat(document.getElementById('input-cardio-time').value);
-                
                 if (!duration) return tg.showAlert("Укажи время!");
                 
                 let realMET = parseFloat(intensityKey);
                 if (MET_CARDIO[name] && MET_CARDIO[name][intensityKey]) {
                     realMET = MET_CARDIO[name][intensityKey];
                 }
-
-                // Формула: MET * 3.5 * вес / 200 * минуты
                 kcal = (realMET * 3.5 * safeBodyWeight / 200) * duration; 
                 xp = Math.round(kcal * 1.5);
                 r = duration; 
                 vol = duration; 
-            
             } else { // СИЛОВЫЕ
                 w = parseFloat(document.getElementById('input-w').value) || 0;
                 r = parseFloat(document.getElementById('input-r').value);
-                
                 if (!r) return tg.showAlert("Укажи повторы!");
 
                 if (w > (personalRecords[name] || 0) && type !== 2) {
@@ -483,22 +477,14 @@
                 if (type === 1) load = 0; 
                 vol = (type === 2) ? 0 : (load * r);
 
-                // --- РЕАЛИСТИЧНАЯ ФОРМУЛА ДЛЯ СИЛОВЫХ (За подход) ---
                 let workingWeight = (type === 1) ? safeBodyWeight : ( (type === 4) ? w : load );
                 let intensityRatio = Math.max(0.3, Math.min(1.5, workingWeight / safeBodyWeight));
-                
-                // MET от 3.5 (легко) до 6.0 (тяжело)
                 let MET = 3.5 + (intensityRatio * 1.7);
                 if (MET > 6) MET = 6;
-
-                // Время под нагрузкой в минутах (1 повтор ~ 3 сек)
                 let minutes = (type === 2) ? (r / 60) : (r * 3 / 60);
-                
-                // Механические калории за подход
                 kcal = (MET * 3.5 * safeBodyWeight / 200) * minutes;
-                if (kcal < 2) kcal = 2; // Минимум 2 ккал за усилие
+                if (kcal < 2) kcal = 2;
 
-                // XP теперь больше зависит от объема (vol) и интенсивности, а не от "дутых" калорий
                 let liftXP = (type === 1) ? (r * 2.5) : (vol / 15 + w * 0.4);
                 xp = Math.round(liftXP + kcal);
             }
@@ -507,10 +493,12 @@
             saveSession();
             tg.HapticFeedback.impactOccurred('medium');
             renderMain();
+            
+            // --- ТУТ ИСПРАВЛЕНИЕ: сначала обновляем имя, потом вызываем адаптацию ---
+            lastExName = name;
             adaptInputs(); 
             
-            lastExName = name;
-            // Очищаем только повторы, вес оставляем (удобно для след. подхода)
+            // Очищаем только повторы, вес теперь будет "липнуть" с первого же подхода
             if (type !== 3) {
                 document.getElementById('input-r').value = ''; 
             }
@@ -519,33 +507,46 @@
         function finishWorkout() {
             if (currentSession.length === 0) return;
 
+            // 1. Сначала считаем общие показатели (время и типы)
+            let cardioMins = 0;
+            let strengthSets = 0;
+            currentSession.forEach(s => {
+                if (s.type === 3) cardioMins += s.r; 
+                else strengthSets++;
+            });
+
             const vol = currentSession.reduce((a, c) => a + c.vol, 0);
             const mechKcal = currentSession.reduce((a, c) => a + c.kcal, 0);
             
-            // --- БОНУС ЗА ОБЩУЮ АКТИВНОСТЬ (EPOC + Отдых) ---
-            // Считаем время: кардио + по 2.5 минуты на каждый силовой подход
+            // 2. Считаем бонусные калории (теперь переменные выше уже определены)
             let sessionMinutes = Math.round(cardioMins + strengthSets * 2.5);
-            let baseMET = 3.0; // Интенсивность просто нахождения в зале
+            let baseMET = 3.0; 
             let sessionKcalBonus = (baseMET * 3.5 * (profile.weight || 80) / 200) * sessionMinutes;
-            
             let totalKcal = Math.round(mechKcal + sessionKcalBonus);
             
-            let xp = currentSession.reduce((a, c) => a + c.xp, 0);
-            if (xp > 15000) xp = 15000;
+            let sessionXP = currentSession.reduce((a, c) => a + c.xp, 0);
+            if (sessionXP > 15000) sessionXP = 15000;
 
-            let cardioMins = 0, strengthSets = 0;
-            currentSession.forEach(s => {
-                if (s.type === 3) cardioMins += s.r; else strengthSets++;
-            });
             let sessionType = (cardioMins > strengthSets * 3) ? 'cardio' : 'strength';
 
+            // 3. Создаем объект записи ПЕРЕД тем, как считать Diff
+            const record = {
+                date: Date.now(),
+                dateStr: new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'short'}),
+                vol, 
+                kcal: totalKcal, 
+                xp: sessionXP, 
+                time: Math.round(cardioMins + strengthSets * 3), 
+                type: sessionType
+            };
+
+            // 4. Считаем прогресс (Diff)
             let diffPercent = 0;
             let diffType = 'neutral';
             
             if (history.length > 0) {
                 const prev = history.find(h => (h.type || 'strength') === sessionType);
                 if (prev) {
-                    // Сравниваем ФИЗИЧЕСКИЕ показатели, а не XP
                     let currVal = (sessionType === 'cardio') ? record.time : record.vol;
                     let prevVal = (sessionType === 'cardio') ? prev.time : prev.vol;
                     
@@ -557,27 +558,21 @@
                 }
             }
 
-            const record = {
-                date: Date.now(),
-                dateStr: new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'short'}),
-                vol, kcal, xp, time: Math.round(cardioMins + strengthSets*3), type: sessionType
-            };
-            
+            // 5. Сохраняем данные
             history.unshift(record);
-            totalXP += xp;
+            totalXP += sessionXP;
             
             localStorage.setItem('ip_history', JSON.stringify(history));
             localStorage.setItem('ip_xp', totalXP);
             localStorage.removeItem('ip_current');
             currentSession = [];
 
-            // Заполнение экрана результата
-            document.getElementById('res-xp').innerText = `+${Math.round(xp)}`;
+            // 6. Обновляем экран результатов
+            document.getElementById('res-xp').innerText = `+${Math.round(sessionXP)}`;
             document.getElementById('res-vol').innerText = (sessionType === 'cardio') ? "Кардио" : vol;
-            document.getElementById('res-kcal').innerText = Math.round(kcal); 
+            document.getElementById('res-kcal').innerText = totalKcal; 
             document.getElementById('res-time').innerText = record.time;
             
-            // МОТИВАЦИОННЫЙ ЗАГОЛОВОК
             document.getElementById('res-header-praise').innerText = PRAISE_WORDS[Math.floor(Math.random() * PRAISE_WORDS.length)];
 
             const tipsArr = TIPS[profile.goal] || TIPS['health'];
