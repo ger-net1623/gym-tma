@@ -7,35 +7,53 @@ const State = {
     lastExName: null, 
 
     init() {
-        // Инициализация Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        // Инициализация Telegram WebApp с защитой
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+            }
+        } catch (e) {
+            console.warn("Telegram API not available (running in browser?)", e);
+        }
 
-        // Загрузка данных из LocalStorage
-        this.profile = JSON.parse(localStorage.getItem('ip_profile'));
-        this.history = JSON.parse(localStorage.getItem('ip_history')) || [];
-        this.currentSession = JSON.parse(localStorage.getItem('ip_current')) || [];
-        this.personalRecords = JSON.parse(localStorage.getItem('ip_prs')) || {};
-        this.totalXP = parseInt(localStorage.getItem('ip_xp')) || 0;
+        // Загрузка данных из LocalStorage с защитой от сбоев
+        try {
+            const safeParse = (key, def) => {
+                const item = localStorage.getItem(key);
+                if (!item || item === "undefined") return def;
+                try { return JSON.parse(item); } catch (e) { return def; }
+            };
 
-        // ВАЖНО: Сначала создаем инпуты в DOM, иначе при переходе на экраны будет ошибка
-        UI.renderSetupInputs();
+            this.profile = safeParse('ip_profile', null);
+            this.history = safeParse('ip_history', []);
+            this.currentSession = safeParse('ip_current', []);
+            this.personalRecords = safeParse('ip_prs', {});
+            this.totalXP = parseInt(localStorage.getItem('ip_xp')) || 0;
+            this.lastExName = localStorage.getItem('ip_lastEx') || null;
 
-        // Логика маршрутизации (Роутинг)
+        } catch (e) {
+            console.error("Storage Error:", e);
+            alert("Ошибка загрузки данных. Приложение сброшено.");
+            this.resetAll();
+            return;
+        }
+
+        if(typeof UI !== 'undefined') {
+            UI.renderSetupInputs();
+        } else {
+            return alert("Ошибка: UI модуль не загружен");
+        }
+
         if (!this.profile || !this.profile.weight) {
-            // Если профиля нет — показываем онбординг
             UI.showScreen('screen-onboarding');
         } else {
-            // Если профиль есть — загружаем главное приложение
             UI.showScreen('main-app');
-            
-            // Заполняем поля и списки
             UI.fillProfileInputs(); 
-            UI.updateExList(); // Теперь это сработает, так как DB.CATS существует
+            UI.updateExList();
             UI.renderAll();
             
-            // Открываем вкладку героя по умолчанию
             const navItems = document.querySelectorAll('.nav-item');
             if (navItems.length > 0) {
                 UI.switchTab('tab-hero', navItems[0]);
@@ -44,21 +62,22 @@ const State = {
     },
 
     save() {
-        if(this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
-        localStorage.setItem('ip_history', JSON.stringify(this.history));
-        localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
-        localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
-        localStorage.setItem('ip_xp', this.totalXP);
+        try {
+            if(this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
+            localStorage.setItem('ip_history', JSON.stringify(this.history));
+            localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
+            localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
+            localStorage.setItem('ip_xp', this.totalXP);
+            // Надежное сохранение (защита от null)
+            localStorage.setItem('ip_lastEx', this.lastExName || '');
+        } catch(e) {
+            console.error("Save error", e);
+        }
     },
 
     resetAll() {
-        const keys = ['ip_profile', 'ip_history', 'ip_current', 'ip_prs', 'ip_xp'];
+        const keys = ['ip_profile', 'ip_history', 'ip_current', 'ip_prs', 'ip_xp', 'ip_lastEx'];
         keys.forEach(k => localStorage.removeItem(k));
         location.reload();
     }
 };
-
-// Запуск приложения ТОЛЬКО после полной загрузки HTML
-window.addEventListener('DOMContentLoaded', () => {
-    State.init();
-});

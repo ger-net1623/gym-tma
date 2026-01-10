@@ -4,23 +4,27 @@ const UI = {
         const screen = document.getElementById(id);
         if (screen) screen.classList.add('active-screen');
         
-        if (id === 'main-app') {
-            window.Telegram.WebApp.BackButton.hide();
-        } else {
-            window.Telegram.WebApp.BackButton.show();
-            window.Telegram.WebApp.BackButton.onClick(() => {
-                if(document.getElementById('screen-result').classList.contains('active-screen')) {
-                    this.closeResult();
-                } else if (document.getElementById('screen-profile-setup').classList.contains('active-screen')) {
-                    // Если нажали "Назад" на экране настройки, но профиля еще нет -> идем на старт
-                     if(!State.profile) this.showScreen('screen-onboarding');
-                     else this.showScreen('main-app');
+        try {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
+                if (id === 'main-app') {
+                    window.Telegram.WebApp.BackButton.hide();
+                } else {
+                    window.Telegram.WebApp.BackButton.show();
+                    window.Telegram.WebApp.BackButton.onClick(() => {
+                        if(document.getElementById('screen-result').classList.contains('active-screen')) {
+                            UI.closeResult();
+                        } else if (document.getElementById('screen-profile-setup').classList.contains('active-screen')) {
+                             if(!State.profile) UI.showScreen('screen-onboarding');
+                             else UI.showScreen('main-app');
+                        }
+                    });
                 }
-            });
+            }
+        } catch(e) {
+            console.warn("BackButton error", e);
         }
     },
 
-    // Генерирует поля ввода для экрана настройки (первый запуск)
     renderSetupInputs() {
         const container = document.getElementById('setup-inputs-container');
         if (!container) return;
@@ -61,12 +65,12 @@ const UI = {
 
     switchTab(tabId, navEl) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
-        document.getElementById(tabId).classList.add('active-tab');
+        const tab = document.getElementById(tabId);
+        if(tab) tab.classList.add('active-tab');
         
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(navEl) navEl.classList.add('active');
 
-        // Обновляем данные при переключении
         if (tabId === 'tab-hero') this.renderHero();
         if (tabId === 'tab-stats') this.renderHistory();
         if (tabId === 'tab-settings') this.fillProfileInputs();
@@ -74,7 +78,8 @@ const UI = {
 
     updateExList() {
         const catSelect = document.getElementById('select-cat');
-        // Заполняем категории, если пусто
+        if (!catSelect) return;
+
         if (catSelect.options.length === 0) {
              catSelect.innerHTML = Object.entries(DB.CATS).map(([key, val]) => 
                 `<option value="${key}">${val}</option>`
@@ -83,20 +88,29 @@ const UI = {
 
         const cat = catSelect.value;
         const exSelect = document.getElementById('select-ex');
-        exSelect.innerHTML = DB.EXERCISES[cat].map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`).join('');
+        const exList = DB.EXERCISES[cat] || [];
+        
+        exSelect.innerHTML = exList.map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`).join('');
         exSelect.value = 0; 
         this.adaptInputs(); 
     },
 
     adaptInputs() {
-        const cat = document.getElementById('select-cat').value;
-        const exIdx = document.getElementById('select-ex').value;
+        const catSelect = document.getElementById('select-cat');
+        const exSelect = document.getElementById('select-ex');
+        if(!catSelect || !exSelect) return;
+
+        const cat = catSelect.value;
+        const exIdx = exSelect.value;
+        
+        if (!DB.EXERCISES[cat] || !DB.EXERCISES[cat][exIdx]) return;
+
         const [name, type, mult, flags] = DB.EXERCISES[cat][exIdx];
         const f = flags || {};
 
-        // Отображение PR
         const prEl = document.getElementById('pr-display');
-        const currentPR = State.personalRecords[name] || 0;
+        const currentPR = (State.personalRecords && State.personalRecords[name]) ? State.personalRecords[name] : 0;
+        
         if (type !== 3 && currentPR > 0) {
             prEl.innerText = `🏆 PR: ${currentPR}кг`;
             prEl.classList.add('visible');
@@ -104,7 +118,6 @@ const UI = {
             prEl.classList.remove('visible');
         }
 
-        // Подсказки
         const hintContainer = document.getElementById('hints-container');
         let hintsHTML = '';
         if (f.db) hintsHTML += `<div class="hint-block visible">🏋️‍♂️ Вводи вес одной гантели.</div>`;
@@ -113,11 +126,9 @@ const UI = {
         if (type === 1 || name === "Планка") hintsHTML += `<div class="hint-block visible">⚖️ Свой вес учитывается!</div>`;
         hintContainer.innerHTML = hintsHTML;
 
-        // Поля ввода
         const strBlock = document.getElementById('input-container-strength');
         const cardioBlock = document.getElementById('input-container-cardio');
         
-        // "Липкий вес": Сбрасываем поля ТОЛЬКО если упражнение сменилось
         if (State.lastExName !== name) {
             document.getElementById('input-w').value = ''; 
             document.getElementById('input-r').value = '';
@@ -184,7 +195,6 @@ const UI = {
     },
 
     renderHero() {
-        // Null Safety: если профиля нет, не рендерим детали
         if (!State.profile) return;
 
         let rank = "Яйцо", icon = "🥚", next = 500, lvl = 1;
@@ -253,12 +263,11 @@ const UI = {
             badge.classList.add('hidden');
         }
 
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        try { window.Telegram.WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
         this.showScreen('screen-result');
     },
 
     closeResult() {
-        // Возвращаемся в таб тренировки (индекс 1)
         this.showScreen('main-app');
         const trainNavBtn = document.querySelectorAll('.nav-item')[1];
         this.switchTab('tab-train', trainNavBtn);
@@ -272,7 +281,6 @@ const UI = {
 
     fillProfileInputs() {
         if(!State.profile) return;
-        // Заполняем форму в настройках
         const w = document.getElementById('prof-weight'); if(w) w.value = State.profile.weight;
         const h = document.getElementById('prof-height'); if(h) h.value = State.profile.height;
         const a = document.getElementById('prof-age'); if(a) a.value = State.profile.age;

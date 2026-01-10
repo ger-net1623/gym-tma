@@ -6,6 +6,15 @@
     <title>IronPath 2.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="style.css">
+    
+    <script>
+        window.addEventListener("error", function (e) {
+            alert("Ошибка: " + e.message + "\nФайл: " + e.filename + "\nСтрока: " + e.lineno);
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+            alert("Ошибка Promise: " + e.reason);
+        });
+    </script>
 </head>
 <body>
 
@@ -84,7 +93,9 @@
                 <select id="select-cat" onchange="UI.updateExList()"></select>
                 <select id="select-ex" onchange="UI.adaptInputs()"></select>
                 
-                <div id="hints-container"></div> <div id="input-container-strength" class="input-row">
+                <div id="hints-container"></div>
+                
+                <div id="input-container-strength" class="input-row">
                     <div class="input-group">
                         <label id="label-w" class="input-label">
                             <span id="text-w-label">Вес (кг)</span>
@@ -202,9 +213,13 @@
     <script src="state.js"></script>
 
     <script>
-        // Запуск приложения
         document.addEventListener('DOMContentLoaded', () => {
-            State.init();
+            console.log("DOM loaded, starting App...");
+            if (typeof State !== 'undefined') {
+                State.init();
+            } else {
+                alert("Ошибка: файл state.js не загрузился.");
+            }
         });
     </script>
 </body>
