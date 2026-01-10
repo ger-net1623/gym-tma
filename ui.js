@@ -1,7 +1,9 @@
 const UI = {
     showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
+        const screen = document.getElementById(id);
+        if (screen) screen.classList.add('active-screen');
+        
         if (id === 'main-app') {
             window.Telegram.WebApp.BackButton.hide();
         } else {
@@ -9,11 +11,52 @@ const UI = {
             window.Telegram.WebApp.BackButton.onClick(() => {
                 if(document.getElementById('screen-result').classList.contains('active-screen')) {
                     this.closeResult();
-                } else {
-                    this.showScreen('main-app');
+                } else if (document.getElementById('screen-profile-setup').classList.contains('active-screen')) {
+                    // Если нажали "Назад" на экране настройки, но профиля еще нет -> идем на старт
+                     if(!State.profile) this.showScreen('screen-onboarding');
+                     else this.showScreen('main-app');
                 }
             });
         }
+    },
+
+    // Генерирует поля ввода для экрана настройки (первый запуск)
+    renderSetupInputs() {
+        const container = document.getElementById('setup-inputs-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="input-row">
+                <div class="input-group">
+                    <label class="input-label">Вес (кг)</label>
+                    <input type="number" id="setup-weight" placeholder="80" inputmode="decimal">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Рост (см)</label>
+                    <input type="number" id="setup-height" placeholder="175" inputmode="numeric">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label class="input-label">Возраст</label>
+                    <input type="number" id="setup-age" placeholder="25" inputmode="numeric">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Пол</label>
+                    <select id="setup-gender">
+                        <option value="male">Мужчина</option>
+                        <option value="female">Женщина</option>
+                    </select>
+                </div>
+            </div>
+            <label class="input-label">Цель</label>
+            <select id="setup-goal">
+                <option value="strength">Сила</option>
+                <option value="muscle">Масса</option>
+                <option value="health">Здоровье</option>
+                <option value="fatloss">Похудение</option>
+            </select>
+        `;
     },
 
     switchTab(tabId, navEl) {
@@ -22,11 +65,16 @@ const UI = {
         
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(navEl) navEl.classList.add('active');
+
+        // Обновляем данные при переключении
+        if (tabId === 'tab-hero') this.renderHero();
+        if (tabId === 'tab-stats') this.renderHistory();
+        if (tabId === 'tab-settings') this.fillProfileInputs();
     },
 
     updateExList() {
         const catSelect = document.getElementById('select-cat');
-        // Если категории еще не заполнены
+        // Заполняем категории, если пусто
         if (catSelect.options.length === 0) {
              catSelect.innerHTML = Object.entries(DB.CATS).map(([key, val]) => 
                 `<option value="${key}">${val}</option>`
@@ -69,7 +117,7 @@ const UI = {
         const strBlock = document.getElementById('input-container-strength');
         const cardioBlock = document.getElementById('input-container-cardio');
         
-        // Сброс полей только если упражнение сменилось
+        // "Липкий вес": Сбрасываем поля ТОЛЬКО если упражнение сменилось
         if (State.lastExName !== name) {
             document.getElementById('input-w').value = ''; 
             document.getElementById('input-r').value = '';
@@ -136,6 +184,9 @@ const UI = {
     },
 
     renderHero() {
+        // Null Safety: если профиля нет, не рендерим детали
+        if (!State.profile) return;
+
         let rank = "Яйцо", icon = "🥚", next = 500, lvl = 1;
         const totalXP = State.totalXP;
         
@@ -151,7 +202,8 @@ const UI = {
         }
         if (totalXP >= DB.LEVELS[DB.LEVELS.length-1].xp) next = "MAX";
 
-        document.getElementById('main-char-icon').innerText = icon;
+        const iconEl = document.getElementById('main-char-icon');
+        if(iconEl) iconEl.innerText = icon;
         document.getElementById('main-char-rank').innerText = rank;
         document.getElementById('stat-lvl').innerText = lvl;
         document.getElementById('stat-xp').innerText = Math.round(totalXP).toLocaleString();
@@ -159,7 +211,6 @@ const UI = {
         document.getElementById('main-char-xp').innerText = `${Math.floor(totalXP)} XP`;
         document.getElementById('main-char-next').innerText = (next === "MAX") ? "MAX" : `Цель: ${next}`;
         
-        // Прогресс бар
         let prevXP = 0;
         for(let i=0; i<DB.LEVELS.length; i++) {
             if(totalXP >= DB.LEVELS[i].xp) prevXP = DB.LEVELS[i].xp;
@@ -171,11 +222,8 @@ const UI = {
         }
         document.getElementById('xp-fill').style.width = `${Math.max(0, Math.min(100, progress))}%`;
         
-        // Детали профиля
-        if (State.profile) {
-            document.getElementById('hero-details').innerText = 
-                `${State.profile.weight}кг • ${State.profile.height}см • ${State.profile.age} лет`;
-        }
+        document.getElementById('hero-details').innerText = 
+            `${State.profile.weight}кг • ${State.profile.height}см • ${State.profile.age} лет`;
     },
 
     renderAll() {
@@ -210,8 +258,10 @@ const UI = {
     },
 
     closeResult() {
+        // Возвращаемся в таб тренировки (индекс 1)
         this.showScreen('main-app');
-        this.switchTab('tab-stats', document.querySelectorAll('.nav-item')[2]);
+        const trainNavBtn = document.querySelectorAll('.nav-item')[1];
+        this.switchTab('tab-train', trainNavBtn);
     },
 
     updateNavBadge() {
@@ -222,11 +272,12 @@ const UI = {
 
     fillProfileInputs() {
         if(!State.profile) return;
-        document.getElementById('prof-weight').value = State.profile.weight;
-        document.getElementById('prof-height').value = State.profile.height;
-        document.getElementById('prof-age').value = State.profile.age;
-        document.getElementById('prof-gender').value = State.profile.gender;
-        document.getElementById('prof-goal').value = State.profile.goal;
+        // Заполняем форму в настройках
+        const w = document.getElementById('prof-weight'); if(w) w.value = State.profile.weight;
+        const h = document.getElementById('prof-height'); if(h) h.value = State.profile.height;
+        const a = document.getElementById('prof-age'); if(a) a.value = State.profile.age;
+        const g = document.getElementById('prof-gender'); if(g) g.value = State.profile.gender;
+        const gl = document.getElementById('prof-goal'); if(gl) gl.value = State.profile.goal;
     },
     
     showToast(msg) {

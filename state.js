@@ -4,7 +4,7 @@ const State = {
     currentSession: [],
     personalRecords: {},
     totalXP: 0,
-    lastExName: null, // Для "липкого" веса
+    lastExName: null, 
 
     init() {
         const tg = window.Telegram.WebApp;
@@ -16,15 +16,22 @@ const State = {
         this.personalRecords = JSON.parse(localStorage.getItem('ip_prs')) || {};
         this.totalXP = parseInt(localStorage.getItem('ip_xp')) || 0;
 
-        // Если профиля нет — показываем онбординг, иначе главное приложение
+        // 1. Сначала рендерим инпуты для настройки (иначе они будут пустыми при показе экрана)
+        UI.renderSetupInputs();
+
+        // 2. Логика роутинга
         if (!this.profile || !this.profile.weight) {
             UI.showScreen('screen-onboarding');
         } else {
             UI.showScreen('main-app');
-            // При старте заполняем поля настроек
+            
+            // Если мы уже внутри приложения
             UI.fillProfileInputs(); 
             UI.updateExList();
             UI.renderAll();
+            
+            // По умолчанию открываем вкладку героя
+            UI.switchTab('tab-hero', document.querySelectorAll('.nav-item')[0]);
         }
     },
 

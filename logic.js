@@ -1,26 +1,31 @@
 const Logic = {
     saveProfile(isSetup) {
-        const w = parseFloat(document.getElementById('prof-weight').value);
-        const h = parseFloat(document.getElementById('prof-height').value);
-        const a = parseFloat(document.getElementById('prof-age').value);
+        // Определяем префикс ID в зависимости от экрана (setup- или prof-)
+        const prefix = isSetup ? 'setup-' : 'prof-';
+        
+        const w = parseFloat(document.getElementById(prefix + 'weight').value);
+        const h = parseFloat(document.getElementById(prefix + 'height').value);
+        const a = parseFloat(document.getElementById(prefix + 'age').value);
         
         if (!w || !h || !a) return window.Telegram.WebApp.showAlert("Заполни все поля!");
         
         State.profile = { 
             weight: w, height: h, age: a, 
-            gender: document.getElementById('prof-gender').value, 
-            goal: document.getElementById('prof-goal').value 
+            gender: document.getElementById(prefix + 'gender').value, 
+            goal: document.getElementById(prefix + 'goal').value 
         };
         
         State.save();
         
         if (isSetup) {
             UI.showScreen('main-app');
+            // Переключаемся на первую вкладку
+            UI.switchTab('tab-hero', document.querySelectorAll('.nav-item')[0]);
             UI.updateExList();
             UI.renderAll();
         } else {
             UI.showToast("Профиль обновлен");
-            UI.renderHero(); // Обновляем данные на вкладке героя
+            UI.renderHero();
         }
     },
 
@@ -73,19 +78,25 @@ const Logic = {
             xp = Math.round(liftXP + kcal);
         }
 
-        // Добавляем сет
+        // 1. Сначала сохраняем название упражнения для Sticky Weight
+        State.lastExName = name;
+
+        // 2. Добавляем сет и сохраняем
         State.currentSession.unshift({ id: Date.now(), name, vol, kcal: Math.round(kcal), xp, w, r, type });
         State.save();
         
         window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
         
-        // UI Updates
-        State.lastExName = name; // Запоминаем для UI
+        // 3. Обновляем UI
+        // adaptInputs теперь увидит обновленный lastExName и не станет стирать вес
         UI.adaptInputs(); 
-        if (type !== 3) document.getElementById('input-r').value = ''; // Очищаем только повторы для силовых
         
-        UI.renderSession(); // Обновляем список сессии
-        UI.updateNavBadge(); // Обновляем точку на табе
+        if (type !== 3) {
+            document.getElementById('input-r').value = ''; // Очищаем только повторы
+        }
+        
+        UI.renderSession();
+        UI.updateNavBadge();
     },
 
     finishWorkout() {
@@ -133,13 +144,11 @@ const Logic = {
             }
         }
 
-        // Сохранение
         State.history.unshift(record);
         State.totalXP += sessionXP;
         State.currentSession = [];
         State.save();
 
-        // Показ результатов
         UI.showResult(record, sessionXP, diffType, diffPercent);
         UI.renderAll();
     },
@@ -154,7 +163,9 @@ const Logic = {
     deleteHistoryItem(index) {
         if(confirm("Удалить запись из истории?")) {
             const item = State.history[index];
-            if (item.xp) State.totalXP = Math.max(0, State.totalXP - item.xp);
+            if (item && item.xp) {
+                State.totalXP = Math.max(0, State.totalXP - item.xp);
+            }
             State.history.splice(index, 1);
             State.save();
             UI.renderAll();
