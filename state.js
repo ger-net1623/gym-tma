@@ -7,31 +7,39 @@ const State = {
     lastExName: null, 
 
     init() {
+        // Инициализация Telegram WebApp
         const tg = window.Telegram.WebApp;
+        tg.ready();
         tg.expand();
 
+        // Загрузка данных из LocalStorage
         this.profile = JSON.parse(localStorage.getItem('ip_profile'));
         this.history = JSON.parse(localStorage.getItem('ip_history')) || [];
         this.currentSession = JSON.parse(localStorage.getItem('ip_current')) || [];
         this.personalRecords = JSON.parse(localStorage.getItem('ip_prs')) || {};
         this.totalXP = parseInt(localStorage.getItem('ip_xp')) || 0;
 
-        // 1. Сначала рендерим инпуты для настройки (иначе они будут пустыми при показе экрана)
+        // ВАЖНО: Сначала создаем инпуты в DOM, иначе при переходе на экраны будет ошибка
         UI.renderSetupInputs();
 
-        // 2. Логика роутинга
+        // Логика маршрутизации (Роутинг)
         if (!this.profile || !this.profile.weight) {
+            // Если профиля нет — показываем онбординг
             UI.showScreen('screen-onboarding');
         } else {
+            // Если профиль есть — загружаем главное приложение
             UI.showScreen('main-app');
             
-            // Если мы уже внутри приложения
+            // Заполняем поля и списки
             UI.fillProfileInputs(); 
-            UI.updateExList();
+            UI.updateExList(); // Теперь это сработает, так как DB.CATS существует
             UI.renderAll();
             
-            // По умолчанию открываем вкладку героя
-            UI.switchTab('tab-hero', document.querySelectorAll('.nav-item')[0]);
+            // Открываем вкладку героя по умолчанию
+            const navItems = document.querySelectorAll('.nav-item');
+            if (navItems.length > 0) {
+                UI.switchTab('tab-hero', navItems[0]);
+            }
         }
     },
 
@@ -49,3 +57,8 @@ const State = {
         location.reload();
     }
 };
+
+// Запуск приложения ТОЛЬКО после полной загрузки HTML
+window.addEventListener('DOMContentLoaded', () => {
+    State.init();
+});
