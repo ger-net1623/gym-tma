@@ -1,16 +1,30 @@
 const UI = {
     showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        const screen = document.getElementById(id);
-        if (screen) screen.classList.add('active-screen');
+        // 1. Скрываем все экраны и очищаем их от лишних классов
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active-screen');
+            // Если вдруг где-то затесался hidden на уровне экрана - убираем
+            s.classList.remove('hidden'); 
+        });
         
+        const screen = document.getElementById(id);
+        if (screen) {
+            screen.classList.add('active-screen');
+        }
+        
+        // 2. Работа с кнопкой Back в Telegram
         try {
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
+                const bb = window.Telegram.WebApp.BackButton;
+                
+                // Сначала полностью очищаем старые события, чтобы не было "двойных нажатий"
+                bb.offClick(); 
+
                 if (id === 'main-app') {
-                    window.Telegram.WebApp.BackButton.hide();
+                    bb.hide();
                 } else {
-                    window.Telegram.WebApp.BackButton.show();
-                    window.Telegram.WebApp.BackButton.onClick(() => {
+                    bb.show();
+                    bb.onClick(() => {
                         if(document.getElementById('screen-result').classList.contains('active-screen')) {
                             UI.closeResult();
                         } else if (document.getElementById('screen-profile-setup').classList.contains('active-screen')) {
