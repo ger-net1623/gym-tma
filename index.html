@@ -313,13 +313,24 @@
 
     <!-- Делегирование событий – единая точка входа -->
     <script defer>
-        // Делегируем как click, так и change (для <select>)
+        // Делегирование как click, так и change (для <select>)
         const delegateHandler = e => {
             const el = e.target.closest('[data-action]');
             if (!el) return;
-            const action = el.dataset.action;
-            let args = [];
 
+            const action = el.dataset.action;
+
+            // ---------- Специальный случай: переключение табов ----------
+            // У табов нет data‑args, поэтому берём id сразу из data‑tab-id.
+            if (action === 'switchTab') {
+                const tabId = el.dataset.tabId;               // <-- реальное значение
+                const navEl = el;                              // текущий элемент уже nav‑item
+                UI.switchTab(tabId, navEl);
+                return;                                       // дальше не вызываем map
+            }
+
+            // ---------- Обычные действия, где аргументы могут приходить в data‑args ----------
+            let args = [];
             if (el.dataset.args) {
                 try { args = JSON.parse(el.dataset.args); }
                 catch (_) { console.warn('Неверный JSON в data-args:', el.dataset.args); }
@@ -335,12 +346,7 @@
                 closeResult: UI.closeResult.bind(UI),
                 safeReset: Logic.safeReset.bind(Logic),
 
-                // Специальный обработчик переключения табов
-                switchTab: (tabId) => {
-                    const navEl = document.querySelector(`.nav-item[data-tab-id="${tabId}"]`);
-                    UI.switchTab(tabId, navEl);
-                },
-
+                // остальные (у них есть data‑args)
                 updateExList: UI.updateExList.bind(UI),
                 adaptInputs: UI.adaptInputs.bind(UI)
             };
@@ -351,8 +357,10 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Клик – обычные кнопки, ссылки, div‑ы с data-action
             document.body.addEventListener('click', delegateHandler);
-            document.body.addEventListener('change', delegateHandler); // ← важно!
+            // change – <select>, <input type="checkbox"> и пр.
+            document.body.addEventListener('change', delegateHandler);
 
             console.log('DOM loaded, starting app...');
             if (typeof State !== 'undefined') {
