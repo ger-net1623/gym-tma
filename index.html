@@ -275,14 +275,14 @@
             <div class="nav-item active"
                  aria-label="Герой"
                  data-action="switchTab"
-                 data-args='["tab-hero", this]'>
+                 data-tab-id="tab-hero">
                 <div class="nav-icon">🛡️</div><span>Герой</span>
             </div>
 
             <div class="nav-item"
                  aria-label="Зал"
                  data-action="switchTab"
-                 data-args='["tab-train", this]'>
+                 data-tab-id="tab-train">
                 <div class="nav-icon">💪
                     <div id="workout-badge" class="nav-badge hidden"></div>
                 </div><span>Зал</span>
@@ -291,14 +291,14 @@
             <div class="nav-item"
                  aria-label="Инфо"
                  data-action="switchTab"
-                 data-args='["tab-stats", this]'>
+                 data-tab-id="tab-stats">
                 <div class="nav-icon">📊</div><span>Инфо</span>
             </div>
 
             <div class="nav-item"
                  aria-label="Меню"
                  data-action="switchTab"
-                 data-args='["tab-settings", this]'>
+                 data-tab-id="tab-settings">
                 <div class="nav-icon">⚙️</div><span>Меню</span>
             </div>
         </nav>
@@ -315,7 +315,7 @@
     <!-- Делегирование событий – единственная точка входа -->
     <script defer>
         document.addEventListener('DOMContentLoaded', () => {
-            // "обёртки" для методов UI/Logic, чтобы их можно было вызывать из делегатора
+            // «Обёртки» для методов UI/Logic, чтобы их можно было вызывать из делегатора
             const map = {
                 showScreen: UI.showScreen.bind(UI),
                 saveProfile: Logic.saveProfile.bind(Logic),
@@ -325,7 +325,13 @@
                 deleteHistoryItem: Logic.deleteHistoryItem.bind(Logic),
                 closeResult: UI.closeResult.bind(UI),
                 safeReset: Logic.safeReset.bind(Logic),
-                switchTab: UI.switchTab.bind(UI),
+
+                // Специальный обработчик переключения табов
+                switchTab: (tabId) => {
+                    const navEl = document.querySelector(`.nav-item[data-tab-id="${tabId}"]`);
+                    UI.switchTab(tabId, navEl);
+                },
+
                 updateExList: UI.updateExList.bind(UI),
                 adaptInputs: UI.adaptInputs.bind(UI)
             };
@@ -336,7 +342,15 @@
                 if (!el) return;
 
                 const action = el.dataset.action;
-                const args   = el.dataset.args ? JSON.parse(el.dataset.args) : [];
+                let args = [];
+
+                if (el.dataset.args) {
+                    try {
+                        args = JSON.parse(el.dataset.args);
+                    } catch (err) {
+                        console.warn('Неверный JSON в data-args:', el.dataset.args);
+                    }
+                }
 
                 if (action in map) {
                     map[action](...args);

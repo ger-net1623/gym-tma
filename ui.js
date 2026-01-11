@@ -1,5 +1,5 @@
 /** -------------------------------------------------------------
- *  UI – все функции, отвечающие за отрисовку и взаимодействие
+ *  UI – функции отрисовки и взаимодействия
  * ------------------------------------------------------------- */
 const UI = {
     /** ---------------------------------------------------------
@@ -20,36 +20,39 @@ const UI = {
     //  Показ/скрытие экранов
     // -----------------------------------------------------------------
     showScreen(id) {
-        // Скрываем все экраны (удаляем только "active-screen")
+        // Скрываем только экраны (управляем через .active-screen)
         document.querySelectorAll('.screen').forEach(s => {
             s.classList.remove('active-screen');
-            s.classList.remove('hidden'); // на случай если кто‑то добавил hidden вручную
         });
 
         const screen = document.getElementById(id);
-        if (screen) {
-            screen.classList.add('active-screen');
-        }
+        if (screen) screen.classList.add('active-screen');
 
         // ---------- BackButton handling ----------
         try {
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
                 const bb = window.Telegram.WebApp.BackButton;
 
+                // отписываем старый обработчик, если он есть
                 if (this._backHandler) {
                     try { bb.offClick(this._backHandler); } catch (e) { console.warn(e); }
                     this._backHandler = null;
                 }
 
+                // Показываем/скрываем кнопку в зависимости от экрана
                 if (id === 'main-app' || id === 'screen-onboarding') {
                     bb.hide();
                 } else {
                     const handler = () => {
-                        if (document.getElementById('screen-result').classList.contains('active-screen')) {
+                        // Если открыт результат – закрываем его
+                        if (document.getElementById('screen-result')
+                                .classList.contains('active-screen')) {
                             UI.closeResult();
-                        } else if (document.getElementById('screen-profile-setup').classList.contains('active-screen')) {
-                            if (!State.profile) UI.showScreen('screen-onboarding');
-                            else UI.showScreen('main-app');
+                        } else if (document.getElementById('screen-profile-setup')
+                                .classList.contains('active-screen')) {
+                            // На этапе онбординга: если профиль уже есть – возвращаемся в главный
+                            if (State.profile) UI.showScreen('main-app');
+                            else UI.showScreen('screen-onboarding');
                         } else {
                             UI.showScreen('main-app');
                         }
@@ -108,15 +111,17 @@ const UI = {
     //  Переключение табов
     // -----------------------------------------------------------------
     switchTab(tabId, navEl) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+        document.querySelectorAll('.tab-content')
+                .forEach(t => t.classList.remove('active-tab'));
         const tab = document.getElementById(tabId);
         if (tab) tab.classList.add('active-tab');
 
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.nav-item')
+                .forEach(n => n.classList.remove('active'));
         if (navEl) navEl.classList.add('active');
 
         if (tabId === 'tab-hero')   this.renderHero();
-        if (tabId === 'tab-stats')   this.renderHistory();
+        if (tabId === 'tab-stats')  this.renderHistory();
         if (tabId === 'tab-settings') this.fillProfileInputs();
     },
 
@@ -156,27 +161,37 @@ const UI = {
         const [name, type, , flags = {}] = DB.EXERCISES[cat][exIdx];
         const f = flags;
 
-        // PR‑badges
+        // ---------- PR‑бэйдж ----------
         const prEl = document.getElementById('pr-display');
-        const currentPR = State.personalRecords && State.personalRecords[name] ? State.personalRecords[name] : 0;
-        if (type !== 3 && currentPR > 0) {
-            prEl.textContent = `🏆 PR: ${currentPR}кг`;
-            prEl.classList.add('visible');
-        } else {
-            prEl.classList.remove('visible');
+        const currentPR = State.personalRecords?.[name] ?? 0;
+        if (prEl) {
+            if (type !== 3 && currentPR > 0) {
+                prEl.textContent = `🏆 PR: ${currentPR}кг`;
+                prEl.classList.add('visible');
+            } else {
+                prEl.classList.remove('visible');
+            }
         }
 
-        // Хинты
+        // ---------- Хинты ----------
         const hintContainer = document.getElementById('hints-container');
         const hints = [];
         if (f.db)   hints.push('🏋️‍♂️ Вводи вес одной гантели.');
         if (f.uni)  hints.push('🦵 Упражнение на одну сторону.');
         if (f.mach) hints.push('🤖 Тренажёр. Вес тела не влияет.');
         if (type === 1 || name === 'Планка') hints.push('⚖️ Свой вес учитывается!');
-        hintContainer.innerHTML = hints.map(t => `<div class="hint-block visible">${t}</div>`).join('');
 
-        // Показ/скрытие блоков ввода
-        const strBlock   = document.getElementById('input-container-strength');
+        // Чистый способ без innerHTML → защита от XSS
+        hintContainer.innerHTML = '';                      // очищаем
+        hints.forEach(txt => {
+            const div = document.createElement('div');
+            div.className = 'hint-block visible';
+            div.textContent = txt;
+            hintContainer.appendChild(div);
+        });
+
+        // ---------- Показ/скрытие блоков ввода ----------
+        const strBlock    = document.getElementById('input-container-strength');
         const cardioBlock = document.getElementById('input-container-cardio');
 
         if (type === 3) { // Кардио
@@ -195,14 +210,16 @@ const UI = {
 
             const textW = document.getElementById('text-w-label');
             const lR    = document.getElementById('label-r');
-            textW.textContent = (type === 2 || type === 1) ? 'Доп. вес (кг)' : 'Вес (кг)';
-            lR.textContent    = (type === 2) ? 'Время (сек)' : 'Повторы';
+            if (textW) textW.textContent = (type === 2 || type === 1) ? 'Доп. вес (кг)' : 'Вес (кг)';
+            if (lR)    lR.textContent    = (type === 2) ? 'Время (сек)' : 'Повторы';
         }
 
         // Если сменилось упражнение – чистим вводы
         if (State.lastExName !== name) {
-            document.getElementById('input-w').value = '';
-            document.getElementById('input-r').value = '';
+            const wInput = document.getElementById('input-w');
+            const rInput = document.getElementById('input-r');
+            if (wInput) wInput.value = '';
+            if (rInput) rInput.value = '';
             const cardioTime = document.getElementById('input-cardio-time');
             if (cardioTime) cardioTime.value = '';
         }
@@ -216,7 +233,8 @@ const UI = {
         if (State.currentSession.length > 0) {
             curBlock.classList.remove('hidden');
             const curXP = State.currentSession.reduce((a, c) => a + c.xp, 0);
-            document.getElementById('session-title').textContent = `Сейчас: +${Math.round(curXP)} XP`;
+            document.getElementById('session-title')
+                    .textContent = `Сейчас: +${Math.round(curXP)} XP`;
 
             const listHTML = State.currentSession.map(s => `
                 <div class="list-item">
@@ -224,7 +242,8 @@ const UI = {
                         <b>${this._esc(s.name)}</b>
                         <div style="font-size:12px; opacity:0.7">
                             ${s.type === 3 ? s.r + ' мин' :
-                              (s.type === 2 ? s.r + ' сек' : (s.w > 0 ? s.w + 'кг × ' : '') + s.r)}
+                              (s.type === 2 ? s.r + ' сек' :
+                               (s.w > 0 ? s.w + 'кг × ' : '') + s.r)}
                         </div>
                     </div>
                     <div style="text-align:right; display:flex; align-items:center;">
@@ -277,13 +296,16 @@ const UI = {
         if (!State.profile) return;
 
         const totalXP = State.totalXP;
-        let rank = 'Яйцо', icon = '🥚', next = 500, lvl = 1;
+        let rank  = 'Яйцо',
+            icon  = '🥚',
+            next  = 500,
+            lvl   = 1;
 
         for (let i = 0; i < DB.LEVELS.length; i++) {
             if (totalXP >= DB.LEVELS[i].xp) {
                 rank = DB.LEVELS[i].rank;
                 icon = DB.LEVELS[i].icon;
-                lvl = i + 1;
+                lvl  = i + 1;
             } else {
                 next = DB.LEVELS[i].xp;
                 break;
@@ -293,9 +315,9 @@ const UI = {
 
         document.getElementById('main-char-icon').textContent = icon;
         document.getElementById('main-char-rank').textContent = rank;
-        document.getElementById('stat-lvl').textContent = lvl;
-        document.getElementById('stat-xp').textContent = Math.round(totalXP).toLocaleString();
-        document.getElementById('stat-count').textContent = State.history.length;
+        document.getElementById('stat-lvl').textContent      = lvl;
+        document.getElementById('stat-xp').textContent      = Math.round(totalXP).toLocaleString();
+        document.getElementById('stat-count').textContent   = State.history.length;
         document.getElementById('main-char-xp').textContent = `${Math.floor(totalXP)} XP`;
         document.getElementById('main-char-next').textContent = (next === 'MAX') ? 'MAX' : `Цель: ${next}`;
 
@@ -305,12 +327,13 @@ const UI = {
             if (totalXP >= DB.LEVELS[i].xp) prevXP = DB.LEVELS[i].xp;
             else break;
         }
-        let progress = 100;
-        if (next !== 'MAX') progress = ((totalXP - prevXP) / (next - prevXP)) * 100;
+        const progress = (next === 'MAX')
+            ? 100
+            : ((totalXP - prevXP) / (next - prevXP)) * 100;
         document.getElementById('xp-fill').style.width = `${Math.max(0, Math.min(100, progress))}%`;
 
-        document.getElementById('hero-details').textContent =
-            `${State.profile.weight}кг • ${State.profile.height}см • ${State.profile.age} лет`;
+        document.getElementById('hero-details')
+                .textContent = `${State.profile.weight}кг • ${State.profile.height}см • ${State.profile.age} лет`;
     },
 
     // -----------------------------------------------------------------
@@ -339,7 +362,8 @@ const UI = {
         document.getElementById('res-header-praise').textContent = praise;
 
         const tipsArr = DB.TIPS[State.profile.goal] || DB.TIPS['health'];
-        document.getElementById('res-tip').innerHTML = '💡 ' + this._esc(tipsArr[Math.floor(Math.random() * tipsArr.length)]);
+        document.getElementById('res-tip')
+                .innerHTML = '💡 ' + this._esc(tipsArr[Math.floor(Math.random() * tipsArr.length)]);
 
         const badge = document.getElementById('res-diff-badge');
         badge.className = 'diff-badge hidden';
@@ -381,11 +405,11 @@ const UI = {
     // -----------------------------------------------------------------
     fillProfileInputs() {
         if (!State.profile) return;
-        const w = document.getElementById('prof-weight'); if (w) w.value = State.profile.weight;
-        const h = document.getElementById('prof-height'); if (h) h.value = State.profile.height;
-        const a = document.getElementById('prof-age'); if (a) a.value = State.profile.age;
-        const g = document.getElementById('prof-gender'); if (g) g.value = State.profile.gender;
-        const gl = document.getElementById('prof-goal'); if (gl) gl.value = State.profile.goal;
+        const w = document.getElementById('prof-weight');   if (w) w.value = State.profile.weight;
+        const h = document.getElementById('prof-height');   if (h) h.value = State.profile.height;
+        const a = document.getElementById('prof-age');        if (a) a.value = State.profile.age;
+        const g = document.getElementById('prof-gender');    if (g) g.value = State.profile.gender;
+        const gl = document.getElementById('prof-goal');    if (gl) gl.value = State.profile.goal;
     },
 
     // -----------------------------------------------------------------

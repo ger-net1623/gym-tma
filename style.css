@@ -1,14 +1,14 @@
 /* ---------------------------------------------------------------
  *  IronPath 2.0 – стили
- *  ---------------------------------------------------------------
+ * ---------------------------------------------------------------
  *  Основные особенности:
- *   • Global reset `box-sizing: border-box` – упрощает расчёт размеров.
- *   • CSS‑переменные (Telegram‑тема + кастомные цвета).
- *   • :focus-visible – улучшенная доступность.
- *   • prefers-reduced-motion – уважает предпочтения пользователя.
- *   • Одна система показа экранов: .screen + .active‑screen.
+ *   • Global reset `box-sizing: border-box`
+ *   • CSS‑переменные (Telegram‑тема + кастомные цвета)
+ *   • :focus-visible – улучшенная доступность
+ *   • prefers-reduced-motion – уважает предпочтения пользователя
+ *   • Одна система показа экранов: .screen + .active‑screen
  *   • .hidden – утилитный класс, применяется только к вспомогательным
- *     элементам (toast, бейджи, подсказки).
+ *               элементам (toast, бейджи, подсказки).
  * --------------------------------------------------------------- */
 
 /* -------------------- Общий reset -------------------- */
@@ -27,7 +27,7 @@
     --tg-btn-text:     var(--tg-theme-button-text-color, #ffffff);
     --tg-secondary:    var(--tg-theme-secondary-bg-color, #1f2937);
 
-    /* Кастомные цвета, которые будем использовать в UI */
+    /* Кастомные цвета */
     --green:   #10b981;
     --red:     #ef4444;
     --gold:    #f59e0b;
@@ -46,21 +46,21 @@ body {
     padding: 16px;
     padding-bottom: calc(var(--nav-height) + 20px);
     max-width: 600px;
-    margin-inline: auto;               /* центрируем контент */
+    margin-inline: auto;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 
 /* -------------------- Экраны (один активный) -------------------- */
 .screen {
-    display: none;                      /* скрыт по‑умолчанию */
+    display: none;
     animation: fade 0.2s ease-out;
 }
 .active-screen {
-    display: block;                     /* только активный видим */
+    display: block;
 }
 
-/* Утилита – скрывает любые элементы вручную (toast, бейдж и т.п.) */
+/* Утилита – скрывает любые элементы вручную */
 .hidden {
     display: none;
 }
@@ -97,7 +97,7 @@ body {
     justify-content: space-between;
 }
 
-/* -------------------- Типографика -------------------- */
+/* -------------------- Типография -------------------- */
 h2, h3 {
     margin: 0 0 10px 0;
     font-weight: 800;
@@ -325,6 +325,13 @@ input:focus { border-color: var(--tg-link); }
     display: none;
     box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
+
+/* Тост становится видимым, когда у него есть класс .visible */
+#toast.visible {
+    display: block !important;
+}
+
+/* Результат тренировок */
 .xp-result-box {
     background: rgba(255,255,255,.05);
     padding: 20px;

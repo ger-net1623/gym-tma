@@ -1,5 +1,5 @@
 /** -------------------------------------------------------------
- *  State – работа с локальным хранилищем и инициализация приложения
+ *  State – работа с локальным хранилищем и инициализация
  * -------------------------------------------------------------
  *  Поля:
  *    profile          – объект {weight, height, age, gender, goal}
@@ -18,7 +18,8 @@ const State = {
     lastExName: null,
 
     /** ---------------------------------------------------------
-     *  Инициализация: загрузка из localStorage, подготовка UI и Telegram‑WebApp
+     *  Инициализация: загрузка из localStorage, подготовка UI,
+     *  Telegram‑WebApp
      * --------------------------------------------------------- */
     init() {
         // 1️⃣ Telegram‑WebApp
@@ -41,7 +42,7 @@ const State = {
             return;
         }
 
-        // 3️⃣ Показываем нужный экран
+        // 3️⃣ Выбор стартового экрана
         if (!this.profile || !this.profile.weight) {
             UI.showScreen('screen-onboarding');
             UI.renderSetupInputs(); // только в режиме onboarding
@@ -60,20 +61,31 @@ const State = {
      *  Сохранение всех данных в localStorage (debounced)
      * --------------------------------------------------------- */
     _saveTimeout: null,
-    save() {
+    /**
+     *  save([force]) – сохраняет состояние.
+     *  Если `force === true`, запись происходит сразу без debounce.
+     */
+    save(force = false) {
+        if (force) {
+            this._commitSave();
+            return;
+        }
         clearTimeout(this._saveTimeout);
-        this._saveTimeout = setTimeout(() => {
-            try {
-                if (this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
-                localStorage.setItem('ip_history', JSON.stringify(this.history));
-                localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
-                localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
-                localStorage.setItem('ip_xp', JSON.stringify(this.totalXP));
-                localStorage.setItem('ip_lastEx', this.lastExName || '');
-            } catch (e) {
-                console.error('Ошибка при сохранении в localStorage', e);
-            }
-        }, 300);
+        this._saveTimeout = setTimeout(() => this._commitSave(), 300);
+    },
+
+    /** Выполняет запись в localStorage без задержек */
+    _commitSave() {
+        try {
+            if (this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
+            localStorage.setItem('ip_history', JSON.stringify(this.history));
+            localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
+            localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
+            localStorage.setItem('ip_xp', JSON.stringify(this.totalXP));
+            localStorage.setItem('ip_lastEx', this.lastExName || '');
+        } catch (e) {
+            console.error('Ошибка при сохранении в localStorage', e);
+        }
     },
 
     /** ---------------------------------------------------------
@@ -85,7 +97,6 @@ const State = {
             if (!raw || raw === 'undefined') return def;
             try {
                 const parsed = JSON.parse(raw);
-                // Специальные проверки для массивов и объектов
                 if (Array.isArray(def)) return Array.isArray(parsed) ? parsed : def;
                 if (def === null) return (parsed && typeof parsed === 'object') ? parsed : def;
                 return (typeof parsed === typeof def) ? parsed : def;
@@ -94,26 +105,21 @@ const State = {
             }
         };
 
-        this.profile         = safeParse('ip_profile', null);
-        this.history         = safeParse('ip_history', []);
-        this.currentSession  = safeParse('ip_current', []);
-        this.personalRecords = safeParse('ip_prs', {});
+        this.profile          = safeParse('ip_profile', null);
+        this.history          = safeParse('ip_history', []);
+        this.currentSession   = safeParse('ip_current', []);
+        this.personalRecords  = safeParse('ip_prs', {});
 
-        // totalXP может быть числом или JSON‑строкой
+        // totalXP может быть числом либо JSON‑строкой
         const xpRaw = localStorage.getItem('ip_xp');
         if (xpRaw) {
-            try {
-                this.totalXP = JSON.parse(xpRaw);
-            } catch (_) {
-                this.totalXP = parseInt(xpRaw, 10) || 0;
-            }
+            try { this.totalXP = JSON.parse(xpRaw); }
+            catch (_) { this.totalXP = parseInt(xpRaw, 10) || 0; }
         } else {
             this.totalXP = 0;
         }
 
-        // На всякий случай пересчитаем (чтобы гарантировать консистентность)
-        this.calcTotalXP();
-
+        this.calcTotalXP();               // гарантируем консистентность
         this.lastExName = localStorage.getItem('ip_lastEx') || null;
     },
 
@@ -129,7 +135,7 @@ const State = {
      * --------------------------------------------------------- */
     resetAll() {
         const keys = ['ip_profile', 'ip_history', 'ip_current',
-            'ip_prs', 'ip_xp', 'ip_lastEx'];
+                      'ip_prs', 'ip_xp', 'ip_lastEx'];
         keys.forEach(k => localStorage.removeItem(k));
 
         this.profile = null;
@@ -139,13 +145,12 @@ const State = {
         this.totalXP = 0;
         this.lastExName = null;
 
-        // window.location.reload() иногда блокируется в iframe Telegram,
-        // поэтому используем replace, который гарантировано работает.
+        // Перезагружаем весь WebApp (в iframe Telegram заменяем location)
         window.location.replace(window.location.href);
     },
 
     /** ---------------------------------------------------------
-     *  Пользовательский сброс – вызывается из UI
+     *  Пользовательский (безопасный) сброс – вызывается из UI
      * --------------------------------------------------------- */
     safeReset() {
         if (confirm('Удалить весь прогресс и профиль? Это действие нельзя отменить.')) {
@@ -153,3 +158,11 @@ const State = {
         }
     }
 };
+
+/* -----------------------------------------------------------------
+ *  Сохраняем состояние сразу при попытке закрыть/перезагрузить страницу
+ * ----------------------------------------------------------------- */
+window.addEventListener('beforeunload', () => {
+    // Принудительно сохраняем без debounce – гарантируем, что последние изменения упадут в LS
+    State.save(true);
+});
