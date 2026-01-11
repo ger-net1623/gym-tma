@@ -1,21 +1,44 @@
-:root {
-    --tg-bg: var(--tg-theme-bg-color, #121212);
-    --tg-text: var(--tg-theme-text-color, #ffffff);
-    --tg-hint: var(--tg-theme-hint-color, #9ca3af);
-    --tg-link: var(--tg-theme-link-color, #3b82f6);
-    --tg-btn: var(--tg-theme-button-color, #3b82f6);
-    --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
-    --tg-secondary: var(--tg-theme-secondary-bg-color, #1f2937);
+/* ---------------------------------------------------------------
+ *  IronPath 2.0 – стили
+ *  ---------------------------------------------------------------
+ *  Основные особенности:
+ *   • Global reset `box-sizing: border-box` – упрощает расчёт размеров.
+ *   • CSS‑переменные (Telegram‑тема + кастомные цвета).
+ *   • :focus-visible – улучшенная доступность.
+ *   • prefers-reduced-motion – уважает предпочтения пользователя.
+ *   • Одна система показа экранов: .screen + .active‑screen.
+ *   • .hidden – утилитный класс, применяется только к вспомогательным
+ *     элементам (toast, бейджи, подсказки).
+ * --------------------------------------------------------------- */
 
-    --green: #10b981;
-    --red: #ef4444;
-    --gold: #f59e0b;
+/* -------------------- Общий reset -------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* -------------------- Переменные -------------------- */
+:root {
+    /* Тема Telegram (запасные цвета – если SDK недоступен) */
+    --tg-bg:           var(--tg-theme-bg-color, #121212);
+    --tg-text:         var(--tg-theme-text-color, #ffffff);
+    --tg-hint:         var(--tg-theme-hint-color, #9ca3af);
+    --tg-link:         var(--tg-theme-link-color, #3b82f6);
+    --tg-btn:          var(--tg-theme-button-color, #3b82f6);
+    --tg-btn-text:     var(--tg-theme-button-text-color, #ffffff);
+    --tg-secondary:    var(--tg-theme-secondary-bg-color, #1f2937);
+
+    /* Кастомные цвета, которые будем использовать в UI */
+    --green:   #10b981;
+    --red:     #ef4444;
+    --gold:    #f59e0b;
+
     --nav-height: 70px;
 }
 
-/* ------------ Общие стили ------------ */
+/* -------------------- Основные стили -------------------- */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    font-family: -apple-system, BlinkMacSystemFont,
+                 'Segoe UI', Roboto, Helvetica, Arial,
                  sans-serif;
     background: var(--tg-bg);
     color: var(--tg-text);
@@ -23,26 +46,26 @@ body {
     padding: 16px;
     padding-bottom: calc(var(--nav-height) + 20px);
     max-width: 600px;
-    margin-inline: auto;
+    margin-inline: auto;               /* центрируем контент */
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 
-/* ------------ Экраны ------------ */
+/* -------------------- Экраны (один активный) -------------------- */
 .screen {
-    display: none;
+    display: none;                      /* скрыт по‑умолчанию */
     animation: fade 0.2s ease-out;
 }
 .active-screen {
-    display: block;
+    display: block;                     /* только активный видим */
 }
 
-/* скрыть любой элемент, помеченный .hidden */
+/* Утилита – скрывает любые элементы вручную (toast, бейдж и т.п.) */
 .hidden {
-    display: none;          /* !important убрано – UI управляет классами явно */
+    display: none;
 }
 
-/* ------------ Табы ------------ */
+/* -------------------- Табы -------------------- */
 .tab-content {
     display: none;
     animation: fade 0.2s ease-out;
@@ -51,18 +74,19 @@ body {
     display: block;
 }
 
+/* -------------------- Анимация появления -------------------- */
 @keyframes fade {
     from { opacity: 0; transform: translateY(5px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ------------ Карточки ------------ */
+/* -------------------- Карточки -------------------- */
 .card {
     background: var(--tg-secondary);
     padding: 20px;
     border-radius: 20px;
     margin-bottom: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
 }
 .center-card {
     text-align: center;
@@ -73,7 +97,7 @@ body {
     justify-content: space-between;
 }
 
-/* ------------ Типографика ------------ */
+/* -------------------- Типографика -------------------- */
 h2, h3 {
     margin: 0 0 10px 0;
     font-weight: 800;
@@ -85,7 +109,7 @@ p {
     margin-bottom: 15px;
 }
 
-/* ------------ Кнопки ------------ */
+/* -------------------- Кнопки -------------------- */
 .btn {
     width: 100%;
     padding: 14px;
@@ -94,40 +118,39 @@ p {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
+    transition: .2s;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.btn-primary { background: var(--tg-btn); color: var(--tg-btn-text); }
-.btn-success { background: var(--green); color: #fff; }
+.btn-primary { background: var(--tg-btn);      color: var(--tg-btn-text); }
+.btn-success { background: var(--green);       color: #fff; }
 .btn-outline {
     background: transparent;
     border: 1px solid var(--tg-hint);
     color: var(--tg-hint);
     font-size: 13px;
 }
-.btn:active { transform: scale(0.98); opacity: 0.9; }
+.btn:active { transform: scale(.98); opacity: .9; }
 
-/* ------------ Поля ввода ------------ */
+/* -------------------- Поля ввода -------------------- */
 input,
 select {
     width: 100%;
     padding: 14px;
     margin-bottom: 12px;
     background: var(--tg-bg);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,.1);
     border-radius: 12px;
     color: var(--tg-text);
     font-size: 16px;
-    box-sizing: border-box;
     outline: none;
     appearance: none;
     -webkit-appearance: none;
 }
 input:focus { border-color: var(--tg-link); }
 
-/* ------------ Нижняя навигация ------------ */
+/* -------------------- Нижняя навигация -------------------- */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -135,7 +158,7 @@ input:focus { border-color: var(--tg-link); }
     right: 0;
     height: var(--nav-height);
     background: var(--tg-secondary);
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid rgba(255,255,255,.05);
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -150,7 +173,7 @@ input:focus { border-color: var(--tg-link); }
     width: 25%;
     height: 100%;
     color: var(--tg-hint);
-    transition: 0.2s;
+    transition: .2s;
     cursor: pointer;
 }
 .nav-item.active { color: var(--tg-link); }
@@ -167,7 +190,7 @@ input:focus { border-color: var(--tg-link); }
     box-shadow: 0 0 5px var(--red);
 }
 
-/* ------------ Статистика и герой ------------ */
+/* -------------------- Статистика и герой -------------------- */
 .stat-grid {
     display: grid;
     grid-template-columns: repeat(3,1fr);
@@ -188,7 +211,7 @@ input:focus { border-color: var(--tg-link); }
 .char-container {
     text-align: center;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,.05);
     margin-bottom: 15px;
 }
 .char-icon {
@@ -199,12 +222,12 @@ input:focus { border-color: var(--tg-link); }
 }
 @keyframes bounce {
     0%,100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
+    50%     { transform: translateY(-5px); }
 }
 .xp-bar-bg {
     width: 100%;
     height: 8px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,.1);
     border-radius: 4px;
     margin-top: 8px;
     overflow: hidden;
@@ -216,10 +239,10 @@ input:focus { border-color: var(--tg-link); }
     transition: width .5s;
 }
 
-/* ------------ Списки ------------ */
+/* -------------------- Списки -------------------- */
 .list-item {
     padding: 12px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -229,7 +252,7 @@ input:focus { border-color: var(--tg-link); }
     padding: 8px 12px;
     font-size: 18px;
     cursor: pointer;
-    background: rgba(239,68,68,0.1);
+    background: rgba(239,68,68,.1);
     border-radius: 8px;
     margin-left: 10px;
     display: flex;
@@ -239,7 +262,7 @@ input:focus { border-color: var(--tg-link); }
     height: 32px;
 }
 
-/* ------------ Дифф‑бэйдж ------------ */
+/* -------------------- Дифф‑бэйдж -------------------- */
 .diff-badge {
     display: inline-block;
     padding: 4px 10px;
@@ -247,17 +270,17 @@ input:focus { border-color: var(--tg-link); }
     font-size: 12px;
     font-weight: bold;
     margin-top: 5px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,.1);
 }
-.diff-pos { background: rgba(16,185,129,0.2); color: var(--green); }
-.diff-neg { background: rgba(239,68,68,0.2); color: var(--red); }
+.diff-pos { background: rgba(16,185,129,.2); color: var(--green); }
+.diff-neg { background: rgba(239,68,68,.2); color: var(--red); }
 
-/* ------------ Хинты и вспомогательные блоки ------------ */
+/* -------------------- Хинты и вспомогательные блоки -------------------- */
 .hint-block {
     color: var(--gold);
     font-size: 12px;
     margin: 10px 0;
-    background: rgba(245,158,11,0.1);
+    background: rgba(245,158,11,.1);
     padding: 10px;
     border-radius: 8px;
     border-left: 3px solid var(--gold);
@@ -287,7 +310,7 @@ input:focus { border-color: var(--tg-link); }
     100% { opacity: .7; }
 }
 
-/* ------------ Toast и блок результатов ------------ */
+/* -------------------- Toast и блок результатов -------------------- */
 #toast {
     position: fixed;
     top: 20px;
@@ -303,8 +326,22 @@ input:focus { border-color: var(--tg-link); }
     box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
 .xp-result-box {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,.05);
     padding: 20px;
     border-radius: 15px;
     margin: 20px 0;
+}
+
+/* -------------------- Доступность -------------------- */
+:focus-visible {
+    outline: 2px solid var(--tg-link);
+    outline-offset: 2px;
+}
+
+/* -------------------- Предпочтения пользователя -------------------- */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0s !important;
+        transition-duration: 0s !important;
+    }
 }

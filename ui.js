@@ -1,32 +1,37 @@
+/** -------------------------------------------------------------
+ *  UI – все функции, отвечающие за отрисовку и взаимодействие
+ * ------------------------------------------------------------- */
 const UI = {
-    // ---------------------------------
-    //  Внутренняя функция экранирования.
-    //  Нужна только если в будущем появятся
-    //  пользовательские названия упражнений.
-    // ---------------------------------
+    /** ---------------------------------------------------------
+     *  Экранирование пользовательского ввода (для innerHTML)
+     * --------------------------------------------------------- */
     _esc(str) {
-        const d = document.createElement('div');
-        d.textContent = str;
-        return d.innerHTML;
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
-    // ссылка на текущий обработчик BackButton, чтобы потом отписаться
+    /** ---------------------------------------------------------
+     *  Ссылка на текущий обработчик BackButton (Telegram)
+     * --------------------------------------------------------- */
     _backHandler: null,
 
+    // -----------------------------------------------------------------
+    //  Показ/скрытие экранов
+    // -----------------------------------------------------------------
     showScreen(id) {
-        // Скрываем все экраны
+        // Скрываем все экраны (удаляем только "active-screen")
         document.querySelectorAll('.screen').forEach(s => {
             s.classList.remove('active-screen');
-            s.classList.add('hidden');
+            s.classList.remove('hidden'); // на случай если кто‑то добавил hidden вручную
         });
 
         const screen = document.getElementById(id);
         if (screen) {
-            screen.classList.remove('hidden');
             screen.classList.add('active-screen');
         }
 
-        // -----------  BackButton handling ----------
+        // ---------- BackButton handling ----------
         try {
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
                 const bb = window.Telegram.WebApp.BackButton;
@@ -59,6 +64,9 @@ const UI = {
         }
     },
 
+    // -----------------------------------------------------------------
+    //  Формы ввода в onboarding
+    // -----------------------------------------------------------------
     renderSetupInputs() {
         const container = document.getElementById('setup-inputs-container');
         if (!container) return;
@@ -96,6 +104,9 @@ const UI = {
         `;
     },
 
+    // -----------------------------------------------------------------
+    //  Переключение табов
+    // -----------------------------------------------------------------
     switchTab(tabId, navEl) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
         const tab = document.getElementById(tabId);
@@ -104,32 +115,35 @@ const UI = {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if (navEl) navEl.classList.add('active');
 
-        if (tabId === 'tab-hero') this.renderHero();
-        if (tabId === 'tab-stats') this.renderHistory();
+        if (tabId === 'tab-hero')   this.renderHero();
+        if (tabId === 'tab-stats')   this.renderHistory();
         if (tabId === 'tab-settings') this.fillProfileInputs();
     },
 
+    // -----------------------------------------------------------------
+    //  Обновление списка упражнений
+    // -----------------------------------------------------------------
     updateExList() {
         const catSelect = document.getElementById('select-cat');
         if (!catSelect) return;
 
-        if (catSelect.options.length === 0) {
-            catSelect.innerHTML = Object.entries(DB.CATS)
-                .map(([key, val]) => `<option value="${key}">${val}</option>`)
-                .join('');
-        }
+        // Перезаполняем категории каждый раз (это проще поддерживать)
+        catSelect.innerHTML = Object.entries(DB.CATS)
+            .map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 
         const cat = catSelect.value;
         const exSelect = document.getElementById('select-ex');
         const exList = DB.EXERCISES[cat] || [];
 
         exSelect.innerHTML = exList
-            .map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`)
-            .join('');
+            .map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`).join('');
         exSelect.selectedIndex = 0;
         this.adaptInputs();
     },
 
+    // -----------------------------------------------------------------
+    //  Адаптация вводов под тип упражнения
+    // -----------------------------------------------------------------
     adaptInputs() {
         const catSelect = document.getElementById('select-cat');
         const exSelect = document.getElementById('select-ex');
@@ -139,12 +153,12 @@ const UI = {
         const exIdx = parseInt(exSelect.value, 10);
         if (!DB.EXERCISES[cat] || !DB.EXERCISES[cat][exIdx]) return;
 
-        const [name, type, , flags] = DB.EXERCISES[cat][exIdx];
-        const f = flags || {};
+        const [name, type, , flags = {}] = DB.EXERCISES[cat][exIdx];
+        const f = flags;
 
-        // PR‑бадж
+        // PR‑badges
         const prEl = document.getElementById('pr-display');
-        const currentPR = (State.personalRecords && State.personalRecords[name]) ? State.personalRecords[name] : 0;
+        const currentPR = State.personalRecords && State.personalRecords[name] ? State.personalRecords[name] : 0;
         if (type !== 3 && currentPR > 0) {
             prEl.textContent = `🏆 PR: ${currentPR}кг`;
             prEl.classList.add('visible');
@@ -155,47 +169,48 @@ const UI = {
         // Хинты
         const hintContainer = document.getElementById('hints-container');
         const hints = [];
-        if (f.db) hints.push('🏋️‍♂️ Вводи вес одной гантели.');
-        if (f.uni) hints.push('🦵 Упражнение на одну сторону.');
-        if (f.mach) hints.push('🤖 Тренажер. Вес тела не влияет.');
+        if (f.db)   hints.push('🏋️‍♂️ Вводи вес одной гантели.');
+        if (f.uni)  hints.push('🦵 Упражнение на одну сторону.');
+        if (f.mach) hints.push('🤖 Тренажёр. Вес тела не влияет.');
         if (type === 1 || name === 'Планка') hints.push('⚖️ Свой вес учитывается!');
         hintContainer.innerHTML = hints.map(t => `<div class="hint-block visible">${t}</div>`).join('');
 
         // Показ/скрытие блоков ввода
-        const strBlock = document.getElementById('input-container-strength');
+        const strBlock   = document.getElementById('input-container-strength');
         const cardioBlock = document.getElementById('input-container-cardio');
 
-        if (type === 3) {
+        if (type === 3) { // Кардио
             strBlock.classList.add('hidden');
             cardioBlock.classList.remove('hidden');
 
             const iSelect = document.getElementById('input-cardio-intensity');
             let iMap = {3: 'Лайт', 6: 'Средне', 9: 'Тяжело', 11: 'Максимум'};
             if (name === 'Ходьба') iMap = {3: 'Прогулка', 5: 'Бодрый шаг', 7: 'В гору'};
-            const entries = Object.entries(iMap);
-            iSelect.innerHTML = entries
-                .map(([val, txt], idx) => {
-                    const selected = (idx === 0) ? 'selected' : '';
-                    return `<option value="${val}" ${selected}>${txt}</option>`;
-                })
+            iSelect.innerHTML = Object.entries(iMap)
+                .map(([val, txt], idx) => `<option value="${val}" ${idx === 0 ? 'selected' : ''}>${txt}</option>`)
                 .join('');
-        } else {
+        } else { // Силовые
             cardioBlock.classList.add('hidden');
             strBlock.classList.remove('hidden');
 
             const textW = document.getElementById('text-w-label');
-            const lR = document.getElementById('label-r');
+            const lR    = document.getElementById('label-r');
             textW.textContent = (type === 2 || type === 1) ? 'Доп. вес (кг)' : 'Вес (кг)';
-            lR.textContent = (type === 2) ? 'Время (сек)' : 'Повторы';
+            lR.textContent    = (type === 2) ? 'Время (сек)' : 'Повторы';
         }
 
+        // Если сменилось упражнение – чистим вводы
         if (State.lastExName !== name) {
             document.getElementById('input-w').value = '';
             document.getElementById('input-r').value = '';
-            document.getElementById('input-cardio-time').value = '';
+            const cardioTime = document.getElementById('input-cardio-time');
+            if (cardioTime) cardioTime.value = '';
         }
     },
 
+    // -----------------------------------------------------------------
+    //  Отрисовка текущей сессии (вкладка «Зал»)
+    // -----------------------------------------------------------------
     renderSession() {
         const curBlock = document.getElementById('current-session-block');
         if (State.currentSession.length > 0) {
@@ -214,7 +229,9 @@ const UI = {
                     </div>
                     <div style="text-align:right; display:flex; align-items:center;">
                         <span style="color:var(--gold); font-weight:bold">+${s.xp} XP</span>
-                        <div class="del-btn" onclick="Logic.deleteSet('${s.id}')">✕</div>
+                        <div class="del-btn"
+                             data-action="deleteSet"
+                             data-args='["${s.id}"]'>✕</div>
                     </div>
                 </div>`).join('');
             document.getElementById('current-list').innerHTML = listHTML;
@@ -223,6 +240,9 @@ const UI = {
         }
     },
 
+    // -----------------------------------------------------------------
+    //  История тренировок
+    // -----------------------------------------------------------------
     renderHistory() {
         const list = document.getElementById('history-list');
         if (State.history.length === 0) {
@@ -231,24 +251,28 @@ const UI = {
         }
 
         const html = State.history.map((h, i) => {
-            const emoji = h.type === 'cardio' ? '🏃' : '🏋️‍♂️';
+            const emoji  = h.type === 'cardio' ? '🏃' : '🏋️‍♂️';
             const detail = h.type === 'cardio' ? `${h.time} мин` : `${h.vol} кг`;
             return `
                 <div class="list-item">
                     <div>
-                        <div style="font-weight:600">${emoji} ${h.dateStr}</div>
+                        <div style="font-weight:600">${emoji} ${this._esc(h.dateStr)}</div>
                         <div style="font-size:12px; opacity:0.7">${detail}</div>
                     </div>
                     <div style="text-align:right">
                         <div style="color:var(--gold); font-weight:bold">+${Math.round(h.xp)}</div>
                         <div style="font-size:10px; opacity:0.5; color:var(--red); margin-top:4px;"
-                             onclick="Logic.deleteHistoryItem(${i})">удалить</div>
+                             data-action="deleteHistoryItem"
+                             data-args='[${i}]'>удалить</div>
                     </div>
                 </div>`;
         }).join('');
         list.innerHTML = html;
     },
 
+    // -----------------------------------------------------------------
+    //  Рендер героя (уровень, XP, персонаж)
+    // -----------------------------------------------------------------
     renderHero() {
         if (!State.profile) return;
 
@@ -275,21 +299,23 @@ const UI = {
         document.getElementById('main-char-xp').textContent = `${Math.floor(totalXP)} XP`;
         document.getElementById('main-char-next').textContent = (next === 'MAX') ? 'MAX' : `Цель: ${next}`;
 
+        // Прогресс‑бар
         let prevXP = 0;
         for (let i = 0; i < DB.LEVELS.length; i++) {
             if (totalXP >= DB.LEVELS[i].xp) prevXP = DB.LEVELS[i].xp;
             else break;
         }
         let progress = 100;
-        if (next !== 'MAX') {
-            progress = ((totalXP - prevXP) / (next - prevXP)) * 100;
-        }
+        if (next !== 'MAX') progress = ((totalXP - prevXP) / (next - prevXP)) * 100;
         document.getElementById('xp-fill').style.width = `${Math.max(0, Math.min(100, progress))}%`;
 
         document.getElementById('hero-details').textContent =
             `${State.profile.weight}кг • ${State.profile.height}см • ${State.profile.age} лет`;
     },
 
+    // -----------------------------------------------------------------
+    //  Полный рендер (герой + история + сессия)
+    // -----------------------------------------------------------------
     renderAll() {
         this.renderHero();
         this.renderHistory();
@@ -297,9 +323,15 @@ const UI = {
         this.updateNavBadge();
     },
 
+    // -----------------------------------------------------------------
+    //  Показ результата после завершения тренировки
+    // -----------------------------------------------------------------
     showResult(record, sessionXP, diffType, diffPercent) {
         document.getElementById('res-xp').textContent = `+${Math.round(sessionXP)}`;
-        document.getElementById('res-vol').textContent = record.type === 'cardio' ? 'Кардио' : record.vol;
+
+        const volText = record.type === 'cardio' ? `${record.time} мин` : `${record.vol}`;
+        document.getElementById('res-vol').textContent = volText;
+
         document.getElementById('res-kcal').textContent = record.kcal;
         document.getElementById('res-time').textContent = record.time;
 
@@ -307,7 +339,7 @@ const UI = {
         document.getElementById('res-header-praise').textContent = praise;
 
         const tipsArr = DB.TIPS[State.profile.goal] || DB.TIPS['health'];
-        document.getElementById('res-tip').innerHTML = '💡 ' + tipsArr[Math.floor(Math.random() * tipsArr.length)];
+        document.getElementById('res-tip').innerHTML = '💡 ' + this._esc(tipsArr[Math.floor(Math.random() * tipsArr.length)]);
 
         const badge = document.getElementById('res-diff-badge');
         badge.className = 'diff-badge hidden';
@@ -326,18 +358,27 @@ const UI = {
         this.showScreen('screen-result');
     },
 
+    // -----------------------------------------------------------------
+    //  Закрытие экрана результата
+    // -----------------------------------------------------------------
     closeResult() {
         this.showScreen('main-app');
         const trainNavBtn = document.querySelectorAll('.nav-item')[1];
         this.switchTab('tab-train', trainNavBtn);
     },
 
+    // -----------------------------------------------------------------
+    //  Обновление бейджа в навигации (кружок «Зал»)
+    // -----------------------------------------------------------------
     updateNavBadge() {
         const badge = document.getElementById('workout-badge');
         if (State.currentSession.length > 0) badge.classList.remove('hidden');
         else badge.classList.add('hidden');
     },
 
+    // -----------------------------------------------------------------
+    //  Заполнение полей профиля в настройках
+    // -----------------------------------------------------------------
     fillProfileInputs() {
         if (!State.profile) return;
         const w = document.getElementById('prof-weight'); if (w) w.value = State.profile.weight;
@@ -347,6 +388,9 @@ const UI = {
         const gl = document.getElementById('prof-goal'); if (gl) gl.value = State.profile.goal;
     },
 
+    // -----------------------------------------------------------------
+    //  Тост‑сообщения
+    // -----------------------------------------------------------------
     showToast(msg) {
         const t = document.getElementById('toast');
         t.textContent = msg;

@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <!-- Убрали maximum‑scale – это улучшает доступность -->
+    <!-- Отключаем масштабирование – улучшает доступность в Telegram -->
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>IronPath 2.0</title>
 
-    <!-- Telegram WebApp SDK (если не загрузится – не падаем) -->
+    <!-- Предзагрузка SDK Telegram (ускоряем первый рендер) -->
+    <link rel="preconnect" href="https://telegram.org">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- Универсальный обработчик ошибок – в консоль, а не alert -->
+    <!-- Универсальный обработчик ошибок -->
     <script defer>
         window.addEventListener('error', e => {
-            console.warn('Ошибка JavaScript:', e.message, 'в файле', e.filename, 'строка', e.lineno);
+            console.warn('Ошибка JavaScript:', e.message,
+                         'в файле', e.filename, 'строка', e.lineno);
         });
         window.addEventListener('unhandledrejection', e => {
             console.warn('Необработанное Promise‑исключение:', e.reason);
@@ -24,7 +26,6 @@
 </head>
 <body>
 
-    <!-- Toast – скрыт по‑умолчанию -->
     <div id="toast" class="hidden" role="alert" aria-live="assertive">🏆 Новый рекорд!</div>
 
     <!-- --------------------------------------------------------------------- -->
@@ -37,22 +38,26 @@
                 <h2>IronPath</h2>
                 <p>Фиксируй тренировки.<br>Прокачивай персонажа.<br>Следи за прогрессом.</p>
             </div>
-            <button class="btn btn-primary"
-                    onclick="UI.showScreen('screen-profile-setup')">Начать</button>
+            <button type="button"
+                    class="btn btn-primary"
+                    data-action="showScreen"
+                    data-args='["screen-profile-setup"]'>Начать</button>
         </div>
     </div>
 
     <!-- --------------------------------------------------------------------- -->
     <!--  СТРОЙКА ПРОФИЛЯ (onboarding → ввод данных)                         -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="screen-profile-setup" class="screen">
+    <div id="screen-profile-setup" class="screen hidden">
         <div class="card">
             <h2>Создание профиля</h2>
             <p>Нужно для расчёта калорий и XP</p>
             <div id="setup-inputs-container"></div>
-            <button class="btn btn-primary"
+            <button type="button"
+                    class="btn btn-primary"
                     style="margin-top:10px;"
-                    onclick="Logic.saveProfile(true)">Сохранить и начать</button>
+                    data-action="saveProfile"
+                    data-args='[true]'>Сохранить и начать</button>
         </div>
     </div>
 
@@ -66,7 +71,7 @@
             <div id="res-diff-badge" class="diff-badge hidden"></div>
 
             <div class="xp-result-box">
-                <div style="font-size:12px; opacity:0.7;">XP Получено</div>
+                <div style="font-size:12px; opacity:0.7;">XP Получено</div>
                 <div style="font-size:42px; font-weight:900; color:var(--gold);" id="res-xp">+0</div>
             </div>
 
@@ -79,9 +84,10 @@
             <div id="res-tip"
                  class="hint-block visible"
                  style="text-align:left; margin-top:15px;"></div>
-            <button class="btn btn-primary"
+            <button type="button"
+                    class="btn btn-primary"
                     style="margin-top:20px;"
-                    onclick="UI.closeResult()">Отлично</button>
+                    data-action="closeResult">Отлично</button>
         </div>
     </div>
 
@@ -102,15 +108,17 @@
                         <span id="main-char-next">Цель: 500</span>
                     </div>
                 </div>
+
                 <div class="stat-grid">
                     <div><div class="stat-val" id="stat-xp">0</div><div class="stat-label">Всего XP</div></div>
                     <div><div class="stat-val" id="stat-count">0</div><div class="stat-label">Тренировок</div></div>
                     <div><div class="stat-val" id="stat-lvl">1</div><div class="stat-label">Уровень</div></div>
                 </div>
             </div>
+
             <div class="card">
                 <h3>Текущие параметры</h3>
-                <p id="hero-details" style="margin-bottom:0">Загрузка...</p>
+                <p id="hero-details" style="margin-bottom:0">Загрузка…</p>
             </div>
         </div>
 
@@ -118,8 +126,8 @@
         <div id="tab-train" class="tab-content">
             <div class="card">
                 <h3>Упражнение</h3>
-                <select id="select-cat" onchange="UI.updateExList()"></select>
-                <select id="select-ex"  onchange="UI.adaptInputs()"></select>
+                <select id="select-cat" data-action="updateExList"></select>
+                <select id="select-ex"  data-action="adaptInputs"></select>
 
                 <div id="hints-container"></div>
 
@@ -135,6 +143,7 @@
                                autocomplete="off"
                                inputmode="decimal">
                     </div>
+
                     <div class="input-group">
                         <label id="label-r" class="input-label">Повторы</label>
                         <input type="number"
@@ -160,17 +169,19 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary"
+                <button type="button"
+                        class="btn btn-primary"
                         style="margin-top:12px;"
-                        onclick="Logic.addSet()">Добавить подход</button>
+                        data-action="addSet">Добавить подход</button>
             </div>
 
             <div id="current-session-block" class="card hidden">
                 <h3 id="session-title">Сейчас: 0 XP</h3>
                 <div id="current-list"></div>
-                <button class="btn btn-success"
+                <button type="button"
+                        class="btn btn-success"
                         style="margin-top:15px;"
-                        onclick="Logic.finishWorkout()">Завершить тренировку</button>
+                        data-action="finishWorkout">Завершить тренировку</button>
             </div>
         </div>
 
@@ -197,6 +208,7 @@
         <div id="tab-settings" class="tab-content">
             <div class="card">
                 <h3>Настройки профиля</h3>
+
                 <div class="input-row">
                     <div class="input-group">
                         <label class="input-label">Вес (кг)</label>
@@ -215,6 +227,7 @@
                                inputmode="numeric">
                     </div>
                 </div>
+
                 <div class="input-row">
                     <div class="input-group">
                         <label class="input-label">Возраст</label>
@@ -232,6 +245,7 @@
                         </select>
                     </div>
                 </div>
+
                 <label class="input-label">Цель</label>
                 <select id="prof-goal" class="btn">
                     <option value="strength">Сила</option>
@@ -239,37 +253,52 @@
                     <option value="health">Здоровье</option>
                     <option value="fatloss">Похудение</option>
                 </select>
-                <button class="btn btn-primary"
+
+                <button type="button"
+                        class="btn btn-primary"
                         style="margin-top:10px;"
-                        onclick="Logic.saveProfile(false)">Обновить профиль</button>
+                        data-action="saveProfile"
+                        data-args='[false]'>Обновить профиль</button>
             </div>
 
             <div class="card">
                 <h3>Зона опасности</h3>
-                <button class="btn btn-outline"
+                <button type="button"
+                        class="btn btn-outline"
                         style="border-color:var(--red); color:var(--red);"
-                        onclick="Logic.safeReset()">🧨 Полный сброс (Reset)</button>
+                        data-action="safeReset">🧨 Полный сброс (Reset)</button>
             </div>
         </div>
 
         <!-- ***** Навигация снизу ***** -->
         <nav class="bottom-nav">
             <div class="nav-item active"
-                 onclick="UI.switchTab('tab-hero', this)">
+                 aria-label="Герой"
+                 data-action="switchTab"
+                 data-args='["tab-hero", this]'>
                 <div class="nav-icon">🛡️</div><span>Герой</span>
             </div>
+
             <div class="nav-item"
-                 onclick="UI.switchTab('tab-train', this)">
+                 aria-label="Зал"
+                 data-action="switchTab"
+                 data-args='["tab-train", this]'>
                 <div class="nav-icon">💪
                     <div id="workout-badge" class="nav-badge hidden"></div>
                 </div><span>Зал</span>
             </div>
+
             <div class="nav-item"
-                 onclick="UI.switchTab('tab-stats', this)">
+                 aria-label="Инфо"
+                 data-action="switchTab"
+                 data-args='["tab-stats", this]'>
                 <div class="nav-icon">📊</div><span>Инфо</span>
             </div>
+
             <div class="nav-item"
-                 onclick="UI.switchTab('tab-settings', this)">
+                 aria-label="Меню"
+                 data-action="switchTab"
+                 data-args='["tab-settings", this]'>
                 <div class="nav-icon">⚙️</div><span>Меню</span>
             </div>
         </nav>
@@ -283,8 +312,37 @@
     <script src="logic.js" defer></script>
     <script src="ui.js" defer></script>
 
+    <!-- Делегирование событий – единственная точка входа -->
     <script defer>
         document.addEventListener('DOMContentLoaded', () => {
+            // "обёртки" для методов UI/Logic, чтобы их можно было вызывать из делегатора
+            const map = {
+                showScreen: UI.showScreen.bind(UI),
+                saveProfile: Logic.saveProfile.bind(Logic),
+                addSet: Logic.addSet.bind(Logic),
+                finishWorkout: Logic.finishWorkout.bind(Logic),
+                deleteSet: Logic.deleteSet.bind(Logic),
+                deleteHistoryItem: Logic.deleteHistoryItem.bind(Logic),
+                closeResult: UI.closeResult.bind(UI),
+                safeReset: Logic.safeReset.bind(Logic),
+                switchTab: UI.switchTab.bind(UI),
+                updateExList: UI.updateExList.bind(UI),
+                adaptInputs: UI.adaptInputs.bind(UI)
+            };
+
+            // Делегируем клики
+            document.body.addEventListener('click', e => {
+                const el = e.target.closest('[data-action]');
+                if (!el) return;
+
+                const action = el.dataset.action;
+                const args   = el.dataset.args ? JSON.parse(el.dataset.args) : [];
+
+                if (action in map) {
+                    map[action](...args);
+                }
+            });
+
             console.log('DOM loaded, starting app...');
             if (typeof State !== 'undefined') {
                 State.init();

@@ -1,12 +1,12 @@
 /** -------------------------------------------------------------
  *  State – работа с локальным хранилищем и инициализация приложения
- *  -------------------------------------------------------------
- *  Описание полей:
+ * -------------------------------------------------------------
+ *  Поля:
  *    profile          – объект {weight, height, age, gender, goal}
  *    history          – массив записей тренировок
  *    currentSession   – массив подходов текущей тренировки
- *    personalRecords – PR‑ы (самый большой вес/повтор)
- *    totalXP          – суммарный опыт
+ *    personalRecords – PR‑ы
+ *    totalXP          – суммарный опыт (вычисляется из history)
  *    lastExName       – имя последнего выбранного упражнения
  * ------------------------------------------------------------- */
 const State = {
@@ -35,14 +35,13 @@ const State = {
         // 2️⃣ Загрузка из хранилища
         this.load();
 
-        // UI‑модуль обязателен
+        // UI‑модуль обязан быть загружен
         if (typeof UI === 'undefined') {
             alert('Ошибка: модуль UI не загружен');
             return;
         }
 
-        // 3️⃣ Если профиля нет – показываем onboarding,
-        //    иначе сразу переходим к главному интерфейсу
+        // 3️⃣ Показываем нужный экран
         if (!this.profile || !this.profile.weight) {
             UI.showScreen('screen-onboarding');
             UI.renderSetupInputs(); // только в режиме onboarding
@@ -58,20 +57,23 @@ const State = {
     },
 
     /** ---------------------------------------------------------
-     *  Сохранение всех данных в localStorage
+     *  Сохранение всех данных в localStorage (debounced)
      * --------------------------------------------------------- */
+    _saveTimeout: null,
     save() {
-        try {
-            if (this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
-            localStorage.setItem('ip_history', JSON.stringify(this.history));
-            localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
-            localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
-            // XP сохраняем как JSON‑строку – безопаснее при будущих изменениях структуры
-            localStorage.setItem('ip_xp', JSON.stringify(this.totalXP));
-            localStorage.setItem('ip_lastEx', this.lastExName || '');
-        } catch (e) {
-            console.error('Ошибка при сохранении в localStorage', e);
-        }
+        clearTimeout(this._saveTimeout);
+        this._saveTimeout = setTimeout(() => {
+            try {
+                if (this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
+                localStorage.setItem('ip_history', JSON.stringify(this.history));
+                localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
+                localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
+                localStorage.setItem('ip_xp', JSON.stringify(this.totalXP));
+                localStorage.setItem('ip_lastEx', this.lastExName || '');
+            } catch (e) {
+                console.error('Ошибка при сохранении в localStorage', e);
+            }
+        }, 300);
     },
 
     /** ---------------------------------------------------------
@@ -81,15 +83,23 @@ const State = {
         const safeParse = (key, def) => {
             const raw = localStorage.getItem(key);
             if (!raw || raw === 'undefined') return def;
-            try { return JSON.parse(raw); } catch (_) { return def; }
+            try {
+                const parsed = JSON.parse(raw);
+                // Специальные проверки для массивов и объектов
+                if (Array.isArray(def)) return Array.isArray(parsed) ? parsed : def;
+                if (def === null) return (parsed && typeof parsed === 'object') ? parsed : def;
+                return (typeof parsed === typeof def) ? parsed : def;
+            } catch (_) {
+                return def;
+            }
         };
 
-        this.profile = safeParse('ip_profile', null);
-        this.history = safeParse('ip_history', []);
-        this.currentSession = safeParse('ip_current', []);
+        this.profile         = safeParse('ip_profile', null);
+        this.history         = safeParse('ip_history', []);
+        this.currentSession  = safeParse('ip_current', []);
         this.personalRecords = safeParse('ip_prs', {});
 
-        // XP может храниться как число или как JSON‑строка
+        // totalXP может быть числом или JSON‑строкой
         const xpRaw = localStorage.getItem('ip_xp');
         if (xpRaw) {
             try {
@@ -101,17 +111,27 @@ const State = {
             this.totalXP = 0;
         }
 
+        // На всякий случай пересчитаем (чтобы гарантировать консистентность)
+        this.calcTotalXP();
+
         this.lastExName = localStorage.getItem('ip_lastEx') || null;
+    },
+
+    /** ---------------------------------------------------------
+     *  Пересчёт общего XP из массива history
+     * --------------------------------------------------------- */
+    calcTotalXP() {
+        this.totalXP = this.history.reduce((sum, rec) => sum + (rec.xp || 0), 0);
     },
 
     /** ---------------------------------------------------------
      *  Полный сброс прогресса + перезагрузка страницы
      * --------------------------------------------------------- */
     resetAll() {
-        const keys = ['ip_profile', 'ip_history', 'ip_current', 'ip_prs', 'ip_xp', 'ip_lastEx'];
+        const keys = ['ip_profile', 'ip_history', 'ip_current',
+            'ip_prs', 'ip_xp', 'ip_lastEx'];
         keys.forEach(k => localStorage.removeItem(k));
 
-        // Очищаем в памяти – после reload всё будет «чисто»
         this.profile = null;
         this.history = [];
         this.currentSession = [];
@@ -119,7 +139,9 @@ const State = {
         this.totalXP = 0;
         this.lastExName = null;
 
-        location.reload();
+        // window.location.reload() иногда блокируется в iframe Telegram,
+        // поэтому используем replace, который гарантировано работает.
+        window.location.replace(window.location.href);
     },
 
     /** ---------------------------------------------------------
