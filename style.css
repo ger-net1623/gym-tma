@@ -24,7 +24,7 @@
     --tg-hint:         var(--tg-theme-hint-color, #9ca3af);
     --tg-link:         var(--tg-theme-link-color, #3b82f6);
     --tg-btn:          var(--tg-theme-button-color, #3b82f6);
-    --tg-btn-text:     var(--tg-theme-button-text-color, #ffffff);
+    --tg-btn-text:    var(--tg-theme-button-text-color, #ffffff);
     --tg-secondary:    var(--tg-theme-secondary-bg-color, #1f2937);
 
     /* Кастомные цвета */
@@ -56,13 +56,16 @@ body {
     display: none;
     animation: fade 0.2s ease-out;
 }
-.active-screen {
-    display: block;
-}
 
-/* Утилита – скрывает любые элементы вручную */
+/* Утилитный класс – скрывает любые элементы вручную
+   ДОЛЖЕН быть **перед** .active-screen, иначе переопределит его */
 .hidden {
     display: none;
+}
+
+/* Один активный экран – переопределяет .screen и .hidden */
+.active-screen {
+    display: block;
 }
 
 /* -------------------- Табы -------------------- */
@@ -325,8 +328,6 @@ input:focus { border-color: var(--tg-link); }
     display: none;
     box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
-
-/* Тост становится видимым, когда у него есть класс .visible */
 #toast.visible {
     display: block !important;
 }

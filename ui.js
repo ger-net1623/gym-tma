@@ -12,7 +12,7 @@ const UI = {
     },
 
     /** ---------------------------------------------------------
-     *  Ссылка на текущий обработчик BackButton (Telegram)
+     *  Текущий обработчик BackButton (Telegram)
      * --------------------------------------------------------- */
     _backHandler: null,
 
@@ -20,22 +20,26 @@ const UI = {
     //  Показ/скрытие экранов
     // -----------------------------------------------------------------
     showScreen(id) {
-        // Скрываем только экраны (управляем через .active-screen)
+        // Скрываем ВСЕ экраны и убираем .hidden (чтобы он не переопределял .active-screen)
         document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active-screen');
+            s.classList.remove('active-screen', 'hidden');
         });
 
         const screen = document.getElementById(id);
-        if (screen) screen.classList.add('active-screen');
+        if (screen) {
+            screen.classList.add('active-screen');
+            screen.classList.remove('hidden'); // на всякий случай
+        }
 
         // ---------- BackButton handling ----------
         try {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
-                const bb = window.Telegram.WebApp.BackButton;
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.BackButton) {
+                const bb = tg.BackButton;
 
                 // отписываем старый обработчик, если он есть
                 if (this._backHandler) {
-                    try { bb.offClick(this._backHandler); } catch (e) { console.warn(e); }
+                    try { bb.offClick(this._backHandler); } catch (_) {}
                     this._backHandler = null;
                 }
 
@@ -120,29 +124,45 @@ const UI = {
                 .forEach(n => n.classList.remove('active'));
         if (navEl) navEl.classList.add('active');
 
+        // плавный скролл наверх – улучшает UX
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
         if (tabId === 'tab-hero')   this.renderHero();
         if (tabId === 'tab-stats')  this.renderHistory();
         if (tabId === 'tab-settings') this.fillProfileInputs();
     },
 
     // -----------------------------------------------------------------
-    //  Обновление списка упражнений
+    //  Обновление списка упражнений (с сохранением выбранной категории)
     // -----------------------------------------------------------------
     updateExList() {
         const catSelect = document.getElementById('select-cat');
         if (!catSelect) return;
 
-        // Перезаполняем категории каждый раз (это проще поддерживать)
-        catSelect.innerHTML = Object.entries(DB.CATS)
-            .map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+        const prevCat = catSelect.value; // запоминаем текущий
 
+        // Заполняем категории
+        catSelect.innerHTML = Object.entries(DB.CATS)
+            .map(([k, v]) => `<option value="${k}">${v}</option>`)
+            .join('');
+
+        // Восстанавливаем выбранную, если она ещё существует
+        if (prevCat && DB.EXERCISES[prevCat]) {
+            catSelect.value = prevCat;
+        } else {
+            catSelect.selectedIndex = 0;
+        }
+
+        // Обновляем список упражнений под выбранную категорию
         const cat = catSelect.value;
         const exSelect = document.getElementById('select-ex');
         const exList = DB.EXERCISES[cat] || [];
 
         exSelect.innerHTML = exList
-            .map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`).join('');
+            .map((ex, idx) => `<option value="${idx}">${ex[0]}</option>`)
+            .join('');
         exSelect.selectedIndex = 0;
+
         this.adaptInputs();
     },
 
@@ -181,8 +201,7 @@ const UI = {
         if (f.mach) hints.push('🤖 Тренажёр. Вес тела не влияет.');
         if (type === 1 || name === 'Планка') hints.push('⚖️ Свой вес учитывается!');
 
-        // Чистый способ без innerHTML → защита от XSS
-        hintContainer.innerHTML = '';                      // очищаем
+        hintContainer.innerHTML = '';
         hints.forEach(txt => {
             const div = document.createElement('div');
             div.className = 'hint-block visible';
@@ -190,7 +209,7 @@ const UI = {
             hintContainer.appendChild(div);
         });
 
-        // ---------- Показ/скрытие блоков ввода ----------
+        // ---------- Показ/скрытие блоков ----------
         const strBlock    = document.getElementById('input-container-strength');
         const cardioBlock = document.getElementById('input-container-cardio');
 
@@ -202,7 +221,7 @@ const UI = {
             let iMap = {3: 'Лайт', 6: 'Средне', 9: 'Тяжело', 11: 'Максимум'};
             if (name === 'Ходьба') iMap = {3: 'Прогулка', 5: 'Бодрый шаг', 7: 'В гору'};
             iSelect.innerHTML = Object.entries(iMap)
-                .map(([val, txt], idx) => `<option value="${val}" ${idx === 0 ? 'selected' : ''}>${txt}</option>`)
+                .map(([val, txt], idx) => `<option value="${val}" ${idx===0?'selected':''}>${txt}</option>`)
                 .join('');
         } else { // Силовые
             cardioBlock.classList.add('hidden');
@@ -319,7 +338,9 @@ const UI = {
         document.getElementById('stat-xp').textContent      = Math.round(totalXP).toLocaleString();
         document.getElementById('stat-count').textContent   = State.history.length;
         document.getElementById('main-char-xp').textContent = `${Math.floor(totalXP)} XP`;
-        document.getElementById('main-char-next').textContent = (next === 'MAX') ? 'MAX' : `Цель: ${next}`;
+        document.getElementById('main-char-next').textContent = (next === 'MAX')
+            ? 'MAX'
+            : `Цель: ${next}`;
 
         // Прогресс‑бар
         let prevXP = 0;
@@ -374,10 +395,11 @@ const UI = {
         }
 
         try {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
             }
-        } catch (e) { /* ignore */ }
+        } catch (_) {}
 
         this.showScreen('screen-result');
     },
@@ -407,8 +429,8 @@ const UI = {
         if (!State.profile) return;
         const w = document.getElementById('prof-weight');   if (w) w.value = State.profile.weight;
         const h = document.getElementById('prof-height');   if (h) h.value = State.profile.height;
-        const a = document.getElementById('prof-age');        if (a) a.value = State.profile.age;
-        const g = document.getElementById('prof-gender');    if (g) g.value = State.profile.gender;
+        const a = document.getElementById('prof-age');      if (a) a.value = State.profile.age;
+        const g = document.getElementById('prof-gender');   if (g) g.value = State.profile.gender;
         const gl = document.getElementById('prof-goal');    if (gl) gl.value = State.profile.goal;
     },
 
@@ -424,5 +446,23 @@ const UI = {
             t.classList.remove('visible');
             t.classList.add('hidden');
         }, 3000);
+    },
+
+    // -----------------------------------------------------------------
+    //  Применение темы Telegram (при запуске и при её изменении)
+    // -----------------------------------------------------------------
+    applyTelegramTheme() {
+        const tg = window.Telegram?.WebApp;
+        if (!tg) return;
+        const p = tg.themeParams || {};
+
+        const root = document.documentElement;
+        root.style.setProperty('--tg-bg', p.bg_color || '#121212');
+        root.style.setProperty('--tg-text', p.text_color || '#ffffff');
+        root.style.setProperty('--tg-hint', p.hint_color || '#9ca3af');
+        root.style.setProperty('--tg-link', p.link_color || '#3b82f6');
+        root.style.setProperty('--tg-btn', p.button_color || '#3b82f6');
+        root.style.setProperty('--tg-btn-text', p.button_text_color || '#ffffff');
+        root.style.setProperty('--tg-secondary', p.secondary_bg_color || '#1f2937');
     }
 };

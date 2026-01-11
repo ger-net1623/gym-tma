@@ -94,8 +94,7 @@
     <!-- --------------------------------------------------------------------- -->
     <!--  ГЛАВНОЕ ПРИЛОЖЕНИЕ (главный экран)                                 -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="main-app" class="screen hidden">
-
+    <div id="main-app" class="screen"> <!-- **hidden убран** -->
         <!-- ***** ТАБ «Герой» ***** -->
         <div id="tab-hero" class="tab-content active-tab">
             <div class="card">
@@ -312,10 +311,20 @@
     <script src="logic.js" defer></script>
     <script src="ui.js" defer></script>
 
-    <!-- Делегирование событий – единственная точка входа -->
+    <!-- Делегирование событий – единая точка входа -->
     <script defer>
-        document.addEventListener('DOMContentLoaded', () => {
-            // «Обёртки» для методов UI/Logic, чтобы их можно было вызывать из делегатора
+        // Делегируем как click, так и change (для <select>)
+        const delegateHandler = e => {
+            const el = e.target.closest('[data-action]');
+            if (!el) return;
+            const action = el.dataset.action;
+            let args = [];
+
+            if (el.dataset.args) {
+                try { args = JSON.parse(el.dataset.args); }
+                catch (_) { console.warn('Неверный JSON в data-args:', el.dataset.args); }
+            }
+
             const map = {
                 showScreen: UI.showScreen.bind(UI),
                 saveProfile: Logic.saveProfile.bind(Logic),
@@ -336,26 +345,14 @@
                 adaptInputs: UI.adaptInputs.bind(UI)
             };
 
-            // Делегируем клики
-            document.body.addEventListener('click', e => {
-                const el = e.target.closest('[data-action]');
-                if (!el) return;
+            if (action in map) {
+                map[action](...args);
+            }
+        };
 
-                const action = el.dataset.action;
-                let args = [];
-
-                if (el.dataset.args) {
-                    try {
-                        args = JSON.parse(el.dataset.args);
-                    } catch (err) {
-                        console.warn('Неверный JSON в data-args:', el.dataset.args);
-                    }
-                }
-
-                if (action in map) {
-                    map[action](...args);
-                }
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.addEventListener('click', delegateHandler);
+            document.body.addEventListener('change', delegateHandler); // ← важно!
 
             console.log('DOM loaded, starting app...');
             if (typeof State !== 'undefined') {

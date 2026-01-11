@@ -1,13 +1,5 @@
 /** -------------------------------------------------------------
  *  State – работа с локальным хранилищем и инициализация
- * -------------------------------------------------------------
- *  Поля:
- *    profile          – объект {weight, height, age, gender, goal}
- *    history          – массив записей тренировок
- *    currentSession   – массив подходов текущей тренировки
- *    personalRecords – PR‑ы
- *    totalXP          – суммарный опыт (вычисляется из history)
- *    lastExName       – имя последнего выбранного упражнения
  * ------------------------------------------------------------- */
 const State = {
     profile: null,
@@ -22,12 +14,16 @@ const State = {
      *  Telegram‑WebApp
      * --------------------------------------------------------- */
     init() {
-        // 1️⃣ Telegram‑WebApp
+        // 1️⃣ Telegram‑WebApp (если доступен)
         try {
-            if (window.Telegram && window.Telegram.WebApp) {
+            if (window.Telegram?.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 tg.expand();
+
+                // Применяем текущую тему и подписываемся на её изменения
+                UI.applyTelegramTheme();
+                tg.onEvent('themeChanged', UI.applyTelegramTheme);
             }
         } catch (e) {
             console.warn('Telegram API not available (running in browser?)', e);
@@ -43,7 +39,7 @@ const State = {
         }
 
         // 3️⃣ Выбор стартового экрана
-        if (!this.profile || !this.profile.weight) {
+        if (!this.profile?.weight) {
             UI.showScreen('screen-onboarding');
             UI.renderSetupInputs(); // только в режиме onboarding
         } else {
@@ -145,8 +141,8 @@ const State = {
         this.totalXP = 0;
         this.lastExName = null;
 
-        // Перезагружаем весь WebApp (в iframe Telegram заменяем location)
-        window.location.replace(window.location.href);
+        // Перезагружаем страницу
+        window.location.reload();
     },
 
     /** ---------------------------------------------------------
@@ -156,6 +152,43 @@ const State = {
         if (confirm('Удалить весь прогресс и профиль? Это действие нельзя отменить.')) {
             this.resetAll();
         }
+    },
+
+    // ---------------------------------------------------------------
+    //  Экспорт / импорт данных (для бэкапа)
+    // ---------------------------------------------------------------
+    exportData() {
+        const data = {
+            profile: this.profile,
+            history: this.history,
+            currentSession: this.currentSession,
+            personalRecords: this.personalRecords,
+            totalXP: this.totalXP,
+            lastExName: this.lastExName
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ironpath-backup-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    importData(jsonStr) {
+        try {
+            const data = JSON.parse(jsonStr);
+            this.profile = data.profile || null;
+            this.history = data.history || [];
+            this.currentSession = data.currentSession || [];
+            this.personalRecords = data.personalRecords || {};
+            this.totalXP = data.totalXP || 0;
+            this.lastExName = data.lastExName || null;
+            this.save(true);
+            UI.renderAll();
+        } catch (e) {
+            UI.showToast('❌ Не удалось импортировать данные');
+        }
     }
 };
 
@@ -163,6 +196,6 @@ const State = {
  *  Сохраняем состояние сразу при попытке закрыть/перезагрузить страницу
  * ----------------------------------------------------------------- */
 window.addEventListener('beforeunload', () => {
-    // Принудительно сохраняем без debounce – гарантируем, что последние изменения упадут в LS
+    // Принудительно сохраняем без debounce
     State.save(true);
 });
