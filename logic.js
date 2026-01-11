@@ -1,174 +1,207 @@
 const Logic = {
-    // Вспомогательная функция для безопасного показа алертов
     showAlert(msg) {
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
             window.Telegram.WebApp.showAlert(msg);
         } else {
-            alert(msg); // Фоллбэк для браузера
+            alert(msg);
         }
     },
 
+    // Сохранение/обновление профиля
     saveProfile(isSetup) {
         const prefix = isSetup ? 'setup-' : 'prof-';
-        
+
         const wInput = document.getElementById(prefix + 'weight');
         const hInput = document.getElementById(prefix + 'height');
         const aInput = document.getElementById(prefix + 'age');
+        const gInput = document.getElementById(prefix + 'gender');
+        const glInput = document.getElementById(prefix + 'goal');
 
-        if (!wInput || !hInput || !aInput) return alert("Ошибка интерфейса: поля не найдены");
+        if (!wInput || !hInput || !aInput) return this.showAlert('Ошибка интерфейса: поля не найдены');
 
         const w = parseFloat(wInput.value);
         const h = parseFloat(hInput.value);
         const a = parseFloat(aInput.value);
-        
-        if (!w || !h || !a) return this.showAlert("Заполни все поля!");
-        
-        State.profile = { 
-            weight: w, height: h, age: a, 
-            gender: document.getElementById(prefix + 'gender').value, 
-            goal: document.getElementById(prefix + 'goal').value 
+
+        const hasError = [w, h, a].some(v => Number.isNaN(v) || v <= 0);
+        if (hasError) return this.showAlert('Заполни все поля корректно!');
+
+        State.profile = {
+            weight: w,
+            height: h,
+            age: a,
+            gender: gInput.value,
+            goal: glInput.value
         };
-        
         State.save();
-        
+
         if (isSetup) {
             UI.showScreen('main-app');
-            UI.switchTab('tab-hero', document.querySelectorAll('.nav-item')[0]);
+            UI.switchTab('tab-hero', document.querySelector('.nav-item'));
+            UI.renderHero();
+
+            // Инициализируем «Зал», иначе он будет пустым
             UI.updateExList();
             UI.renderAll();
         } else {
-            UI.showToast("Профиль обновлен");
+            this.showAlert('Профиль обновлён');
             UI.renderHero();
         }
     },
 
+    // Добавление подхода
     addSet() {
         const catSelect = document.getElementById('select-cat');
         const exSelect = document.getElementById('select-ex');
-        
-        if (!catSelect || !exSelect) return;
+        if (!catSelect || !exSelect) return this.showAlert('Выберите категорию и упражнение');
 
-        const cat = catSelect.value;
-        const exIdx = exSelect.value;
-        
-        if (!DB.EXERCISES[cat] || !DB.EXERCISES[cat][exIdx]) return alert("Ошибка выбора упражнения");
+        const catKey = catSelect.value;
+        const exIdx = parseInt(exSelect.value, 10);
+        const exData = DB.EXERCISES[catKey][exIdx];
+        const [name, type, mult = 1, flags = {}] = exData;
 
-        const [name, type, mult, flags] = DB.EXERCISES[cat][exIdx];
-        
+        const safeBodyWeight = (State.profile && State.profile.weight) ? State.profile.weight : 75;
         let w = 0, r = 0, kcal = 0, vol = 0, xp = 0;
-        const safeBodyWeight = (State.profile && State.profile.weight > 0) ? parseFloat(State.profile.weight) : 75;
 
-        if (type === 3) { // КАРДИО
-            const intensityKey = document.getElementById('input-cardio-intensity').value; 
+        if (type === 3) { // кардио
+            const intensity = document.getElementById('input-cardio-intensity').value;
             const duration = parseFloat(document.getElementById('input-cardio-time').value);
-            if (!duration) return this.showAlert("Укажи время!");
-            
-            let realMET = parseFloat(intensityKey);
-            if (DB.MET_CARDIO[name] && DB.MET_CARDIO[name][intensityKey]) {
-                realMET = DB.MET_CARDIO[name][intensityKey];
+            if (!duration || duration <= 0) return this.showAlert('Укажи время!');
+
+            // MET‑коэффициент (по справочнику DB.MET_CARDIO)
+            let met = parseFloat(intensity);
+            if (isNaN(met) || !DB.MET_CARDIO[name] || !(intensity in DB.MET_CARDIO[name])) {
+                const firstKey = Object.keys(DB.MET_CARDIO[name] || {})[0];
+                met = firstKey ? DB.MET_CARDIO[name][firstKey] : 1;
+            } else {
+                met = DB.MET_CARDIO[name][intensity];
             }
-            kcal = (realMET * 3.5 * safeBodyWeight / 200) * duration; 
+
+            kcal = (met * 3.5 * safeBodyWeight / 200) * duration;
             xp = Math.round(kcal * 1.5);
-            r = duration; 
-            vol = duration; 
-        } else { // СИЛОВЫЕ
+            r = duration;
+            vol = duration; // совместимость
+        } else { // силовые
             w = parseFloat(document.getElementById('input-w').value) || 0;
             r = parseFloat(document.getElementById('input-r').value);
-            if (!r) return this.showAlert("Укажи повторы!");
+            if (Number.isNaN(r) || r <= 0) return this.showAlert('Укажи количество повторений!');
 
-            if (w > (State.personalRecords[name] || 0) && type !== 2) {
-                State.personalRecords[name] = w;
-                UI.showToast(`🏆 Новый рекорд: ${w} кг!`);
-                try { window.Telegram.WebApp.HapticFeedback.notificationOccurred('success'); } catch(e){}
+            // Тоннаж
+            if (type === 1) {
+                vol = (safeBodyWeight + w) * r;
+            } else {
+                const load = (mult === 2) ? w * 2 : w;
+                vol = load * r;
             }
 
-            let load = w;
-            if (mult === 2) load = w * 2; 
-            if (type === 1) load = 0; 
-            vol = (type === 2) ? 0 : (load * r);
-
-            let workingWeight = (type === 1) ? safeBodyWeight : ( (type === 4) ? w : load );
+            // MET для силовых (упрощённый)
+            let workingWeight = (type === 1) ? safeBodyWeight : w;
             let intensityRatio = Math.max(0.3, Math.min(1.5, workingWeight / safeBodyWeight));
             let MET = 3.5 + (intensityRatio * 1.7);
             if (MET > 6) MET = 6;
-            let minutes = (type === 2) ? (r / 60) : (r * 3 / 60);
+            const minutes = (type === 2) ? (r / 60) : (r * 3 / 60);
             kcal = (MET * 3.5 * safeBodyWeight / 200) * minutes;
             if (kcal < 2) kcal = 2;
 
-            let liftXP = (type === 1) ? (r * 2.5) : (vol / 15 + w * 0.4);
+            const liftXP = (type === 1) ? (r * 2.5) : (vol / 15 + w * 0.4);
             xp = Math.round(liftXP + kcal);
         }
 
-        State.lastExName = name;
-
-        State.currentSession.unshift({ id: Date.now(), name, vol, kcal: Math.round(kcal), xp, w, r, type });
-        State.save();
-        
-        try { window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch(e){}
-        
-        UI.adaptInputs(); 
-        
-        if (type !== 3) {
-            document.getElementById('input-r').value = ''; 
+        // PR‑проверка (по весу)
+        if (type !== 3 && w > (State.personalRecords[name] || 0) && type !== 2) {
+            State.personalRecords[name] = w;
+            UI.showToast(`🏆 Новый рекорд: ${w} кг!`);
+            try { window.Telegram.WebApp.HapticFeedback.notificationOccurred('success'); } catch (e) { }
         }
-        
+
+        // Сохраняем в текущей сессии
+        State.lastExName = name;
+        State.currentSession.unshift({
+            id: (typeof crypto !== 'undefined' && crypto.randomUUID) 
+                ? crypto.randomUUID() 
+                : (Date.now() + '_' + Math.random()),
+            name,
+            vol,
+            kcal: Math.round(kcal),
+            xp,
+            w,
+            r,
+            type
+        });
+        State.save();
+
+        try { window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch (e) { }
+
+        UI.adaptInputs();
+
+        if (type !== 3) document.getElementById('input-r').value = '';
+
         UI.renderSession();
         UI.updateNavBadge();
     },
 
+    // Завершение текущей тренировки
     finishWorkout() {
-        if (State.currentSession.length === 0) return;
+        if (State.currentSession.length === 0) return this.showAlert('Нет подходов для сохранения');
 
-        let cardioMins = 0, strengthSets = 0;
-        State.currentSession.forEach(s => {
-            if (s.type === 3) cardioMins += s.r; 
-            else strengthSets++;
-        });
+        const hasCardio = State.currentSession.some(s => s.type === 3);
+        const hasStrength = State.currentSession.some(s => s.type !== 3);
+        const sessionType = hasCardio && !hasStrength ? 'cardio' : 'strength';
 
-        const vol = State.currentSession.reduce((a, c) => a + c.vol, 0);
-        const mechKcal = State.currentSession.reduce((a, c) => a + c.kcal, 0);
-        
-        // УНИФИЦИРОВАННАЯ ФОРМУЛА ВРЕМЕНИ
-        const AVG_SET_TIME = 2.5; // Минут на подход
-        let sessionMinutes = Math.round(cardioMins + strengthSets * AVG_SET_TIME);
-        
-        let baseMET = 3.0; 
-        let sessionKcalBonus = (baseMET * 3.5 * (State.profile.weight || 80) / 200) * sessionMinutes;
-        let totalKcal = Math.round(mechKcal + sessionKcalBonus);
-        
-        let sessionXP = State.currentSession.reduce((a, c) => a + c.xp, 0);
-        if (sessionXP > 15000) sessionXP = 15000;
+        const totalVol = State.currentSession.reduce((a, s) => a + s.vol, 0);
+        const totalKcalRaw = State.currentSession.reduce((a, s) => a + s.kcal, 0);
+        const totalXP = State.currentSession.reduce((a, s) => a + s.xp, 0);
+        const cardioMins = State.currentSession
+            .filter(s => s.type === 3)
+            .reduce((a, s) => a + s.r, 0);
+        const strengthSets = State.currentSession.filter(s => s.type !== 3).length;
 
-        let sessionType = (cardioMins > strengthSets * 3) ? 'cardio' : 'strength';
+        // Примерное время сессии
+        const AVG_SET_TIME = 2.5; // минут на один силовой подход
+        const sessionMinutes = Math.round(cardioMins + strengthSets * AVG_SET_TIME);
+
+        // ----------  БОНУС КАЛОРИЙ ЗА ВРЕМЯ В ЗАЛЕ ----------
+        const baseMET = 3.0; // «присутствие в зале», без нагрузки
+        const bodyWeight = State.profile?.weight || 80;
+        const sessionKcalBonus = (baseMET * 3.5 * bodyWeight / 200) * sessionMinutes;
+
+        const totalKcal = Math.round(totalKcalRaw + sessionKcalBonus);
+        // -----------------------------------------------------
 
         const record = {
             date: Date.now(),
-            dateStr: new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'short'}),
-            vol, kcal: totalKcal, xp: sessionXP, 
-            time: sessionMinutes, // Используем ту же переменную
+            dateStr: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+            vol: totalVol,
+            kcal: totalKcal,
+            xp: totalXP,
+            time: sessionMinutes,
             type: sessionType
         };
 
+        // Сравнение с прошлой тренировкой того же типа
         let diffPercent = 0, diffType = 'neutral';
         if (State.history.length > 0) {
-            const prev = State.history.find(h => (h.type || 'strength') === sessionType);
+            // ищем **самую последнюю** тренировку того же типа
+            const prev = State.history
+                .filter(h => h.type === sessionType)[0];
             if (prev) {
-                let currVal = (sessionType === 'cardio') ? record.time : record.vol;
-                let prevVal = (sessionType === 'cardio') ? prev.time : prev.vol;
+                const currVal = sessionType === 'cardio' ? record.time : record.vol;
+                const prevVal = sessionType === 'cardio' ? prev.time : prev.vol;
                 if (prevVal > 0) {
                     diffPercent = ((currVal - prevVal) / prevVal) * 100;
                     if (diffPercent > 3) diffType = 'pos';
-                    if (diffPercent < -3) diffType = 'neg';
+                    else if (diffPercent < -3) diffType = 'neg';
                 }
             }
         }
 
+        // Обновляем глобальное состояние
         State.history.unshift(record);
-        State.totalXP += sessionXP;
+        State.totalXP += totalXP;
         State.currentSession = [];
         State.save();
 
-        UI.showResult(record, sessionXP, diffType, diffPercent);
+        UI.showResult(record, totalXP, diffType, diffPercent);
         UI.renderAll();
     },
 
@@ -180,7 +213,7 @@ const Logic = {
     },
 
     deleteHistoryItem(index) {
-        if(confirm("Удалить запись из истории?")) {
+        if (confirm('Удалить запись из истории? XP будет списан.')) {
             const item = State.history[index];
             if (item && item.xp) {
                 State.totalXP = Math.max(0, State.totalXP - item.xp);
@@ -192,8 +225,6 @@ const Logic = {
     },
 
     safeReset() {
-        if(confirm("Удалить ВЕСЬ прогресс и начать заново?")) {
-            State.resetAll();
-        }
+        State.safeReset();
     }
 };

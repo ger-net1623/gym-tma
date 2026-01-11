@@ -2,53 +2,72 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>IronPath 2.0</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Убрали maximum‑scale – это улучшает доступность -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>IronPath 2.0</title>
+
+    <!-- Telegram WebApp SDK (если не загрузится – не падаем) -->
+    <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+
     <link rel="stylesheet" href="style.css">
-    
-    <script>
-        window.addEventListener("error", function (e) {
-            alert("Ошибка: " + e.message + "\nФайл: " + e.filename + "\nСтрока: " + e.lineno);
+
+    <!-- Универсальный обработчик ошибок – в консоль, а не alert -->
+    <script defer>
+        window.addEventListener('error', e => {
+            console.warn('Ошибка JavaScript:', e.message, 'в файле', e.filename, 'строка', e.lineno);
         });
-        window.addEventListener("unhandledrejection", function (e) {
-            alert("Ошибка Promise: " + e.reason);
+        window.addEventListener('unhandledrejection', e => {
+            console.warn('Необработанное Promise‑исключение:', e.reason);
         });
     </script>
 </head>
 <body>
 
-    <div id="toast">🏆 Новый рекорд!</div>
+    <!-- Toast – скрыт по‑умолчанию -->
+    <div id="toast" class="hidden" role="alert" aria-live="assertive">🏆 Новый рекорд!</div>
 
+    <!-- --------------------------------------------------------------------- -->
+    <!--  ОНБОРДИНГ (первый экран)                                            -->
+    <!-- --------------------------------------------------------------------- -->
     <div id="screen-onboarding" class="screen">
         <div class="card center-card">
             <div>
-                <div style="font-size: 70px; margin-bottom: 20px;">🛡️</div>
+                <div style="font-size:70px; margin-bottom:20px;">🛡️</div>
                 <h2>IronPath</h2>
                 <p>Фиксируй тренировки.<br>Прокачивай персонажа.<br>Следи за прогрессом.</p>
             </div>
-            <button class="btn btn-primary" onclick="UI.showScreen('screen-profile-setup')">Начать</button>
+            <button class="btn btn-primary"
+                    onclick="UI.showScreen('screen-profile-setup')">Начать</button>
         </div>
     </div>
 
+    <!-- --------------------------------------------------------------------- -->
+    <!--  СТРОЙКА ПРОФИЛЯ (onboarding → ввод данных)                         -->
+    <!-- --------------------------------------------------------------------- -->
     <div id="screen-profile-setup" class="screen">
         <div class="card">
             <h2>Создание профиля</h2>
-            <p>Нужно для расчета калорий и XP</p>
-            <div id="setup-inputs-container"></div> 
-            <button class="btn btn-primary" style="margin-top: 10px;" onclick="Logic.saveProfile(true)">Сохранить и начать</button>
+            <p>Нужно для расчёта калорий и XP</p>
+            <div id="setup-inputs-container"></div>
+            <button class="btn btn-primary"
+                    style="margin-top:10px;"
+                    onclick="Logic.saveProfile(true)">Сохранить и начать</button>
         </div>
     </div>
 
-    <div id="screen-result" class="screen">
+    <!-- --------------------------------------------------------------------- -->
+    <!--  РЕЗУЛЬТАТ ТРЕНИРОВКИ                                                -->
+    <!-- --------------------------------------------------------------------- -->
+    <div id="screen-result" class="screen hidden">
         <div class="card center-card">
-            <div style="font-size: 60px; margin-bottom: 10px;">🏆</div>
+            <div style="font-size:60px; margin-bottom:10px;">🏆</div>
             <h2 id="res-header-praise">Ты машина!</h2>
             <div id="res-diff-badge" class="diff-badge hidden"></div>
-            
+
             <div class="xp-result-box">
-                <div style="font-size: 12px; opacity: 0.7;">XP Получено</div>
-                <div style="font-size: 42px; font-weight: 900; color: var(--gold);" id="res-xp">+0</div>
+                <div style="font-size:12px; opacity:0.7;">XP Получено</div>
+                <div style="font-size:42px; font-weight:900; color:var(--gold);" id="res-xp">+0</div>
             </div>
 
             <div class="stat-grid">
@@ -56,21 +75,29 @@
                 <div><div class="stat-val" id="res-kcal">0</div><div class="stat-label">Ккал</div></div>
                 <div><div class="stat-val" id="res-time">0</div><div class="stat-label">Мин</div></div>
             </div>
-            
-            <div id="res-tip" class="hint-block visible" style="text-align: left; margin-top: 15px;"></div>
-            <button class="btn btn-primary" style="margin-top: 20px;" onclick="UI.closeResult()">Отлично</button>
+
+            <div id="res-tip"
+                 class="hint-block visible"
+                 style="text-align:left; margin-top:15px;"></div>
+            <button class="btn btn-primary"
+                    style="margin-top:20px;"
+                    onclick="UI.closeResult()">Отлично</button>
         </div>
     </div>
 
-    <div id="main-app" class="screen">
-        
+    <!-- --------------------------------------------------------------------- -->
+    <!--  ГЛАВНОЕ ПРИЛОЖЕНИЕ (главный экран)                                 -->
+    <!-- --------------------------------------------------------------------- -->
+    <div id="main-app" class="screen hidden">
+
+        <!-- ***** ТАБ «Герой» ***** -->
         <div id="tab-hero" class="tab-content active-tab">
             <div class="card">
                 <div class="char-container">
                     <span class="char-icon" id="main-char-icon">🐣</span>
-                    <div style="font-weight: bold; font-size: 18px;" id="main-char-rank">Новичок</div>
+                    <div style="font-weight:bold; font-size:18px;" id="main-char-rank">Новичок</div>
                     <div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-fill"></div></div>
-                    <div style="display:flex; justify-content:space-between; font-size: 11px; color: var(--tg-hint); margin-top: 5px;">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--tg-hint); margin-top:5px;">
                         <span id="main-char-xp">0 XP</span>
                         <span id="main-char-next">Цель: 500</span>
                     </div>
@@ -82,143 +109,187 @@
                 </div>
             </div>
             <div class="card">
-                 <h3>Текущие параметры</h3>
-                 <p id="hero-details" style="margin-bottom:0">Загрузка...</p>
+                <h3>Текущие параметры</h3>
+                <p id="hero-details" style="margin-bottom:0">Загрузка...</p>
             </div>
         </div>
 
+        <!-- ***** ТАБ «Зал» ***** -->
         <div id="tab-train" class="tab-content">
             <div class="card">
                 <h3>Упражнение</h3>
                 <select id="select-cat" onchange="UI.updateExList()"></select>
-                <select id="select-ex" onchange="UI.adaptInputs()"></select>
-                
+                <select id="select-ex"  onchange="UI.adaptInputs()"></select>
+
                 <div id="hints-container"></div>
-                
+
                 <div id="input-container-strength" class="input-row">
                     <div class="input-group">
                         <label id="label-w" class="input-label">
                             <span id="text-w-label">Вес (кг)</span>
                             <span id="pr-display" class="pr-badge"></span>
                         </label>
-                        <input type="number" id="input-w" inputmode="decimal">
+                        <input type="number"
+                               id="input-w"
+                               placeholder="0"
+                               autocomplete="off"
+                               inputmode="decimal">
                     </div>
                     <div class="input-group">
                         <label id="label-r" class="input-label">Повторы</label>
-                        <input type="number" id="input-r" inputmode="numeric">
+                        <input type="number"
+                               id="input-r"
+                               placeholder="0"
+                               autocomplete="off"
+                               inputmode="numeric">
                     </div>
                 </div>
 
                 <div id="input-container-cardio" class="hidden">
                     <div class="input-group">
                         <label class="input-label">Интенсивность</label>
-                        <select id="input-cardio-intensity"></select>
+                        <select id="input-cardio-intensity" class="btn"></select>
                     </div>
                     <div class="input-group">
                         <label class="input-label">Время (мин)</label>
-                        <input type="number" id="input-cardio-time" placeholder="Мин" inputmode="numeric">
+                        <input type="number"
+                               id="input-cardio-time"
+                               placeholder="Мин"
+                               autocomplete="off"
+                               inputmode="numeric">
                     </div>
                 </div>
 
-                <button class="btn btn-primary" style="margin-top:12px;" onclick="Logic.addSet()">Добавить подход</button>
+                <button class="btn btn-primary"
+                        style="margin-top:12px;"
+                        onclick="Logic.addSet()">Добавить подход</button>
             </div>
 
             <div id="current-session-block" class="card hidden">
-                <h3 id="session-title">Сейчас: 0 XP</h3>
+                <h3 id="session-title">Сейчас: 0 XP</h3>
                 <div id="current-list"></div>
-                <button class="btn btn-success" style="margin-top: 15px;" onclick="Logic.finishWorkout()">Завершить тренировку</button>
+                <button class="btn btn-success"
+                        style="margin-top:15px;"
+                        onclick="Logic.finishWorkout()">Завершить тренировку</button>
             </div>
         </div>
 
+        <!-- ***** ТАБ «Статистика» ***** -->
         <div id="tab-stats" class="tab-content">
-             <div class="card">
+            <div class="card">
                 <h3>Активность мышц</h3>
-                <div id="muscle-heatmap" style="height: 100px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--tg-hint); font-size: 12px;">
-                    🚧 Карта мышц (В разработке)
+                <div id="muscle-heatmap"
+                     style="height:100px; background:rgba(255,255,255,0.05); border-radius:10px;
+                            display:flex; align-items:center; justify-content:center;
+                            color:var(--tg-hint); font-size:12px;">
+                    🚧 Карта мышц (в разработке)
                 </div>
             </div>
 
             <div class="card">
                 <h3>История тренировок</h3>
-                <div id="history-list" style="max-height: 400px; overflow-y: auto;"></div>
+                <div id="history-list"
+                     style="max-height:400px; overflow-y:auto;"></div>
             </div>
         </div>
 
+        <!-- ***** ТАБ «Настройки» ***** -->
         <div id="tab-settings" class="tab-content">
             <div class="card">
                 <h3>Настройки профиля</h3>
                 <div class="input-row">
                     <div class="input-group">
                         <label class="input-label">Вес (кг)</label>
-                        <input type="number" id="prof-weight" placeholder="80" inputmode="decimal">
+                        <input type="number"
+                               id="prof-weight"
+                               placeholder="80"
+                               autocomplete="off"
+                               inputmode="decimal">
                     </div>
                     <div class="input-group">
                         <label class="input-label">Рост (см)</label>
-                        <input type="number" id="prof-height" placeholder="175" inputmode="numeric">
+                        <input type="number"
+                               id="prof-height"
+                               placeholder="175"
+                               autocomplete="off"
+                               inputmode="numeric">
                     </div>
                 </div>
                 <div class="input-row">
                     <div class="input-group">
                         <label class="input-label">Возраст</label>
-                        <input type="number" id="prof-age" placeholder="25" inputmode="numeric">
+                        <input type="number"
+                               id="prof-age"
+                               placeholder="25"
+                               autocomplete="off"
+                               inputmode="numeric">
                     </div>
                     <div class="input-group">
                         <label class="input-label">Пол</label>
-                        <select id="prof-gender">
+                        <select id="prof-gender" class="btn">
                             <option value="male">Мужчина</option>
                             <option value="female">Женщина</option>
                         </select>
                     </div>
                 </div>
                 <label class="input-label">Цель</label>
-                <select id="prof-goal">
+                <select id="prof-goal" class="btn">
                     <option value="strength">Сила</option>
                     <option value="muscle">Масса</option>
                     <option value="health">Здоровье</option>
                     <option value="fatloss">Похудение</option>
                 </select>
-                <button class="btn btn-primary" style="margin-top: 10px;" onclick="Logic.saveProfile(false)">Обновить профиль</button>
+                <button class="btn btn-primary"
+                        style="margin-top:10px;"
+                        onclick="Logic.saveProfile(false)">Обновить профиль</button>
             </div>
+
             <div class="card">
                 <h3>Зона опасности</h3>
-                <button class="btn btn-outline" style="border-color: var(--red); color: var(--red);" onclick="Logic.safeReset()">🧨 Полный сброс (Reset)</button>
+                <button class="btn btn-outline"
+                        style="border-color:var(--red); color:var(--red);"
+                        onclick="Logic.safeReset()">🧨 Полный сброс (Reset)</button>
             </div>
         </div>
 
+        <!-- ***** Навигация снизу ***** -->
         <nav class="bottom-nav">
-            <div class="nav-item active" onclick="UI.switchTab('tab-hero', this)">
-                <div class="nav-icon">🛡️</div>
-                <span>Герой</span>
+            <div class="nav-item active"
+                 onclick="UI.switchTab('tab-hero', this)">
+                <div class="nav-icon">🛡️</div><span>Герой</span>
             </div>
-            <div class="nav-item" onclick="UI.switchTab('tab-train', this)">
+            <div class="nav-item"
+                 onclick="UI.switchTab('tab-train', this)">
                 <div class="nav-icon">💪
                     <div id="workout-badge" class="nav-badge hidden"></div>
-                </div>
-                <span>Зал</span>
+                </div><span>Зал</span>
             </div>
-            <div class="nav-item" onclick="UI.switchTab('tab-stats', this)">
-                <div class="nav-icon">📊</div>
-                <span>Инфо</span>
+            <div class="nav-item"
+                 onclick="UI.switchTab('tab-stats', this)">
+                <div class="nav-icon">📊</div><span>Инфо</span>
             </div>
-            <div class="nav-item" onclick="UI.switchTab('tab-settings', this)">
-                <div class="nav-icon">⚙️</div>
-                <span>Меню</span>
+            <div class="nav-item"
+                 onclick="UI.switchTab('tab-settings', this)">
+                <div class="nav-icon">⚙️</div><span>Меню</span>
             </div>
         </nav>
     </div>
 
-    <script src="db.js"></script>
-    <script src="ui.js"></script>
-    <script src="logic.js"></script>
-    <script src="state.js"></script>
+    <!-- --------------------------------------------------------------------- -->
+    <!--  Подключаем скрипты (defer → загружаются после парсинга HTML)          -->
+    <!-- --------------------------------------------------------------------- -->
+    <script src="db.js" defer></script>
+    <script src="state.js" defer></script>
+    <script src="logic.js" defer></script>
+    <script src="ui.js" defer></script>
 
-    <script>
+    <script defer>
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM loaded, starting App...");
+            console.log('DOM loaded, starting app...');
             if (typeof State !== 'undefined') {
                 State.init();
             } else {
-                alert("Ошибка: файл state.js не загрузился.");
+                alert('Ошибка: файл state.js не загрузился.');
             }
         });
     </script>
