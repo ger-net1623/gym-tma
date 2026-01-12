@@ -57,15 +57,15 @@ body {
     animation: fade 0.2s ease-out;
 }
 
-/* Утилитный класс – скрывает любые элементы вручную
-   ДОЛЖЕН быть **перед** .active-screen, иначе переопределит его */
-.hidden {
-    display: none;
-}
-
 /* Один активный экран – переопределяет .screen и .hidden */
 .active-screen {
     display: block;
+}
+
+/* Утилитный класс – скрывает любые элементы вручную
+   ДОЛЖЕН быть **перед** .active-screen, иначе переопределит его */
+.hidden {
+    display: none !important; /* ← гарантируем, что .hidden всегда скрывает */
 }
 
 /* -------------------- Табы -------------------- */
@@ -327,9 +327,13 @@ input:focus { border-color: var(--tg-link); }
     z-index: 1000;
     display: none;
     box-shadow: 0 5px 15px rgba(0,0,0,.3);
+    opacity: 0;
+    transition: opacity .3s ease-out, transform .3s ease-out;
 }
 #toast.visible {
-    display: block !important;
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, 0);
 }
 
 /* Результат тренировок */
@@ -353,3 +357,6 @@ input:focus { border-color: var(--tg-link); }
         transition-duration: 0s !important;
     }
 }
+
+/* ----------- Утилита: гарантировать, что .hidden всегда выше ----------- */
+.hidden { display: none !important; }  /* <‑‑ Дублируем в самом конце, чтобы переопределить любые более ранние правила */

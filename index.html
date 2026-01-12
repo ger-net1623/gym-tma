@@ -5,9 +5,12 @@
     <!-- Отключаем масштабирование – улучшает доступность в Telegram -->
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Цвет в строке состояния мобильных браузеров / Telegram Web‑App -->
+    <meta name="theme-color" content="#121212">
+
     <title>IronPath 2.0</title>
 
-    <!-- Предзагрузка SDK Telegram (ускоряем первый рендер) -->
+    <!-- Предзагрузка SDK Telegram (ускоряет первый рендер) -->
     <link rel="preconnect" href="https://telegram.org">
     <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 
@@ -26,7 +29,13 @@
 </head>
 <body>
 
-    <div id="toast" class="hidden" role="alert" aria-live="assertive">🏆 Новый рекорд!</div>
+    <!-- Toast‑сообщение (скрыт по умолчанию) -->
+    <div id="toast" class="hidden"
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true">
+        🏆 Новый рекорд!
+    </div>
 
     <!-- --------------------------------------------------------------------- -->
     <!--  ОНБОРДИНГ (первый экран)                                            -->
@@ -41,7 +50,10 @@
             <button type="button"
                     class="btn btn-primary"
                     data-action="showScreen"
-                    data-args='["screen-profile-setup"]'>Начать</button>
+                    data-args='["screen-profile-setup"]'
+                    aria-label="Начать (перейти к созданию профиля)">
+                Начать
+            </button>
         </div>
     </div>
 
@@ -57,18 +69,21 @@
                     class="btn btn-primary"
                     style="margin-top:10px;"
                     data-action="saveProfile"
-                    data-args='[true]'>Сохранить и начать</button>
+                    data-args='[true]'
+                    aria-label="Сохранить профиль и перейти к приложению">
+                Сохранить и начать
+            </button>
         </div>
     </div>
 
     <!-- --------------------------------------------------------------------- -->
     <!--  РЕЗУЛЬТАТ ТРЕНИРОВКИ                                                -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="screen-result" class="screen hidden">
+    <div id="screen-result" class="screen hidden" role="region" aria-labelledby="res-header-praise">
         <div class="card center-card">
             <div style="font-size:60px; margin-bottom:10px;">🏆</div>
             <h2 id="res-header-praise">Ты машина!</h2>
-            <div id="res-diff-badge" class="diff-badge hidden"></div>
+            <div id="res-diff-badge" class="diff-badge hidden" aria-live="polite"></div>
 
             <div class="xp-result-box">
                 <div style="font-size:12px; opacity:0.7;">XP Получено</div>
@@ -76,8 +91,9 @@
             </div>
 
             <div class="stat-grid">
-                <div><div class="stat-val" id="res-vol">0</div><div class="stat-label">Тоннаж</div></div>
+                <div><div class="stat-val" id="res-vol">0</div><div class="stat-label" id="res-label">Объём (кг)</div></div>
                 <div><div class="stat-val" id="res-kcal">0</div><div class="stat-label">Ккал</div></div>
+                <div><div class="stat-val" id="res-epoc">0</div><div class="stat-label">EPOC (ккал)</div></div>
                 <div><div class="stat-val" id="res-time">0</div><div class="stat-label">Мин</div></div>
             </div>
 
@@ -87,14 +103,17 @@
             <button type="button"
                     class="btn btn-primary"
                     style="margin-top:20px;"
-                    data-action="closeResult">Отлично</button>
+                    data-action="closeResult"
+                    aria-label="Закрыть результат и вернуться к залу">
+                Отлично
+            </button>
         </div>
     </div>
 
     <!-- --------------------------------------------------------------------- -->
     <!--  ГЛАВНОЕ ПРИЛОЖЕНИЕ (главный экран)                                 -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="main-app" class="screen"> <!-- **hidden убран** -->
+    <div id="main-app" class="screen">
         <!-- ***** ТАБ «Герой» ***** -->
         <div id="tab-hero" class="tab-content active-tab">
             <div class="card">
@@ -125,8 +144,21 @@
         <div id="tab-train" class="tab-content">
             <div class="card">
                 <h3>Упражнение</h3>
-                <select id="select-cat" data-action="updateExList"></select>
-                <select id="select-ex"  data-action="adaptInputs"></select>
+
+                <!-- Категория упражнения -->
+                <select id="select-cat"
+                        data-action="updateExList"
+                        aria-label="Категория упражнения">
+                    <!-- Плейсхолдер, будет переопределён UI.updateExList -->
+                    <option value="" disabled selected>Выберите категорию</option>
+                </select>
+
+                <!-- Список упражнений -->
+                <select id="select-ex"
+                        data-action="adaptInputs"
+                        aria-label="Упражнение">
+                    <option value="" disabled selected>Выберите упражнение</option>
+                </select>
 
                 <div id="hints-container"></div>
 
@@ -139,8 +171,11 @@
                         <input type="number"
                                id="input-w"
                                placeholder="0"
+                               min="0"
+                               step="0.5"
                                autocomplete="off"
-                               inputmode="decimal">
+                               inputmode="decimal"
+                               aria-describedby="pr-display">
                     </div>
 
                     <div class="input-group">
@@ -148,6 +183,8 @@
                         <input type="number"
                                id="input-r"
                                placeholder="0"
+                               min="0"
+                               step="1"
                                autocomplete="off"
                                inputmode="numeric">
                     </div>
@@ -156,13 +193,17 @@
                 <div id="input-container-cardio" class="hidden">
                     <div class="input-group">
                         <label class="input-label">Интенсивность</label>
-                        <select id="input-cardio-intensity" class="btn"></select>
+                        <select id="input-cardio-intensity"
+                                class="btn"
+                                aria-label="Интенсивность кардио"></select>
                     </div>
                     <div class="input-group">
                         <label class="input-label">Время (мин)</label>
                         <input type="number"
                                id="input-cardio-time"
                                placeholder="Мин"
+                               min="0"
+                               step="1"
                                autocomplete="off"
                                inputmode="numeric">
                     </div>
@@ -171,7 +212,10 @@
                 <button type="button"
                         class="btn btn-primary"
                         style="margin-top:12px;"
-                        data-action="addSet">Добавить подход</button>
+                        data-action="addSet"
+                        aria-label="Добавить подход">
+                    Добавить подход
+                </button>
             </div>
 
             <div id="current-session-block" class="card hidden">
@@ -180,7 +224,10 @@
                 <button type="button"
                         class="btn btn-success"
                         style="margin-top:15px;"
-                        data-action="finishWorkout">Завершить тренировку</button>
+                        data-action="finishWorkout"
+                        aria-label="Завершить тренировку">
+                    Завершить тренировку
+                </button>
             </div>
         </div>
 
@@ -214,6 +261,8 @@
                         <input type="number"
                                id="prof-weight"
                                placeholder="80"
+                               min="0"
+                               step="0.5"
                                autocomplete="off"
                                inputmode="decimal">
                     </div>
@@ -222,6 +271,8 @@
                         <input type="number"
                                id="prof-height"
                                placeholder="175"
+                               min="0"
+                               step="1"
                                autocomplete="off"
                                inputmode="numeric">
                     </div>
@@ -233,12 +284,16 @@
                         <input type="number"
                                id="prof-age"
                                placeholder="25"
+                               min="0"
+                               step="1"
                                autocomplete="off"
                                inputmode="numeric">
                     </div>
                     <div class="input-group">
                         <label class="input-label">Пол</label>
-                        <select id="prof-gender" class="btn">
+                        <select id="prof-gender"
+                                class="btn"
+                                aria-label="Пол">
                             <option value="male">Мужчина</option>
                             <option value="female">Женщина</option>
                         </select>
@@ -246,7 +301,9 @@
                 </div>
 
                 <label class="input-label">Цель</label>
-                <select id="prof-goal" class="btn">
+                <select id="prof-goal"
+                        class="btn"
+                        aria-label="Цель тренировок">
                     <option value="strength">Сила</option>
                     <option value="muscle">Масса</option>
                     <option value="health">Здоровье</option>
@@ -257,7 +314,10 @@
                         class="btn btn-primary"
                         style="margin-top:10px;"
                         data-action="saveProfile"
-                        data-args='[false]'>Обновить профиль</button>
+                        data-args='[false]'
+                        aria-label="Обновить профиль">
+                    Обновить профиль
+                </button>
             </div>
 
             <div class="card">
@@ -265,13 +325,21 @@
                 <button type="button"
                         class="btn btn-outline"
                         style="border-color:var(--red); color:var(--red);"
-                        data-action="safeReset">🧨 Полный сброс (Reset)</button>
+                        data-action="safeReset"
+                        aria-label="Полный сброс прогресса">
+                    🧨 Полный сброс (Reset)
+                </button>
             </div>
         </div>
 
-        <!-- ***** Навигация снизу ***** -->
-        <nav class="bottom-nav">
+        <!-- ***** Нижняя навигация ***** -->
+        <nav class="bottom-nav"
+             role="navigation"
+             aria-label="Нижняя навигация"
+             aria-roledescription="tablist">
             <div class="nav-item active"
+                 role="tab"
+                 aria-selected="true"
                  aria-label="Герой"
                  data-action="switchTab"
                  data-tab-id="tab-hero">
@@ -279,15 +347,21 @@
             </div>
 
             <div class="nav-item"
+                 role="tab"
+                 aria-selected="false"
                  aria-label="Зал"
                  data-action="switchTab"
                  data-tab-id="tab-train">
                 <div class="nav-icon">💪
-                    <div id="workout-badge" class="nav-badge hidden"></div>
+                    <div id="workout-badge"
+                         class="nav-badge hidden"
+                         aria-hidden="true"></div>
                 </div><span>Зал</span>
             </div>
 
             <div class="nav-item"
+                 role="tab"
+                 aria-selected="false"
                  aria-label="Инфо"
                  data-action="switchTab"
                  data-tab-id="tab-stats">
@@ -295,6 +369,8 @@
             </div>
 
             <div class="nav-item"
+                 role="tab"
+                 aria-selected="false"
                  aria-label="Меню"
                  data-action="switchTab"
                  data-tab-id="tab-settings">
@@ -313,23 +389,36 @@
 
     <!-- Делегирование событий – единая точка входа -->
     <script defer>
-        // Делегирование как click, так и change (для <select>)
+        // Делегируем click и change (для <select>)
         const delegateHandler = e => {
+            /* ---------------------------------------------------------
+             *  Проблема: <select> имеет data‑action, и на событие click
+             *  мы также реагируем, вызывая updateExList / adaptInputs.
+             *  При этом браузер закрывает открытый выпадающий список,
+             *  потому что в DOM происходит перестройка.
+             *
+             *  Решение – игнорировать click‑события, идущие от <select>.
+             *  Событие change будет обрабатывать изменение выбора.
+             * --------------------------------------------------------- */
+            if (e.type === 'click' && e.target.closest('select')) {
+                // просто выходим, ждём событие change
+                return;
+            }
+
             const el = e.target.closest('[data-action]');
             if (!el) return;
 
             const action = el.dataset.action;
 
-            // ---------- Специальный случай: переключение табов ----------
-            // У табов нет data‑args, поэтому берём id сразу из data‑tab-id.
+            // Специальный случай – переключение табов
             if (action === 'switchTab') {
-                const tabId = el.dataset.tabId;               // <-- реальное значение
-                const navEl = el;                              // текущий элемент уже nav‑item
+                const tabId = el.dataset.tabId;
+                const navEl = el;
                 UI.switchTab(tabId, navEl);
-                return;                                       // дальше не вызываем map
+                return;
             }
 
-            // ---------- Обычные действия, где аргументы могут приходить в data‑args ----------
+            // Обычные действия
             let args = [];
             if (el.dataset.args) {
                 try { args = JSON.parse(el.dataset.args); }
@@ -346,7 +435,7 @@
                 closeResult: UI.closeResult.bind(UI),
                 safeReset: Logic.safeReset.bind(Logic),
 
-                // остальные (у них есть data‑args)
+                // Действия, требующие data‑args
                 updateExList: UI.updateExList.bind(UI),
                 adaptInputs: UI.adaptInputs.bind(UI)
             };
@@ -357,9 +446,7 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Клик – обычные кнопки, ссылки, div‑ы с data-action
             document.body.addEventListener('click', delegateHandler);
-            // change – <select>, <input type="checkbox"> и пр.
             document.body.addEventListener('change', delegateHandler);
 
             console.log('DOM loaded, starting app...');

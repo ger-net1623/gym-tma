@@ -1,201 +1,307 @@
+'use strict';
 /** -------------------------------------------------------------
  *  State – работа с локальным хранилищем и инициализация
  * ------------------------------------------------------------- */
-const State = {
-    profile: null,
-    history: [],
-    currentSession: [],
-    personalRecords: {},
-    totalXP: 0,
-    lastExName: null,
+
+const State = (() => {
+    /* ────────────────────────────────────────────────────────────────
+     *  Версия схемы данных.
+     * ──────────────────────────────────────────────────────────────── */
+    const _VERSION = 2;
+
+    /* ────────────────────────────────────────────────────────────────
+     *  Ключи в localStorage.
+     * ──────────────────────────────────────────────────────────────── */
+    const STORAGE_KEYS = {
+        profile:   'ip_profile',
+        history:   'ip_history',
+        current:   'ip_current',
+        prs:       'ip_prs',
+        xp:        'ip_xp',
+        lastEx:    'ip_lastEx',
+        version:   'ip_version'
+    };
+
+    /* ────────────────────────────────────────────────────────────────
+     *  Внутреннее состояние (закрыто в замыкании)
+     * ──────────────────────────────────────────────────────────────── */
+    const _state = {
+        profile: null,
+        history: [],
+        currentSession: [],
+        personalRecords: {},
+        totalXP: 0,
+        lastExName: null
+    };
 
     /** ---------------------------------------------------------
-     *  Инициализация: загрузка из localStorage, подготовка UI,
-     *  Telegram‑WebApp
+     *  Безопасный JSON‑парсинг
      * --------------------------------------------------------- */
-    init() {
-        // 1️⃣ Telegram‑WebApp (если доступен)
+    const _safeParse = (raw, def) => {
+        if (!raw || raw === 'undefined') return def;
         try {
-            if (window.Telegram?.WebApp) {
-                const tg = window.Telegram.WebApp;
-                tg.ready();
-                tg.expand();
-
-                // Применяем текущую тему и подписываемся на её изменения
-                UI.applyTelegramTheme();
-                tg.onEvent('themeChanged', UI.applyTelegramTheme);
-            }
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(def)) return Array.isArray(parsed) ? parsed : def;
+            if (def === null) return (parsed && typeof parsed === 'object') ? parsed : def;
+            return (typeof parsed === typeof def) ? parsed : def;
         } catch (e) {
-            console.warn('Telegram API not available (running in browser?)', e);
+            console.warn('[State] Ошибка парсинга JSON, используется значение по умолчанию', e);
+            return def;
         }
-
-        // 2️⃣ Загрузка из хранилища
-        this.load();
-
-        // UI‑модуль обязан быть загружен
-        if (typeof UI === 'undefined') {
-            alert('Ошибка: модуль UI не загружен');
-            return;
-        }
-
-        // 3️⃣ Выбор стартового экрана
-        if (!this.profile?.weight) {
-            UI.showScreen('screen-onboarding');
-            UI.renderSetupInputs(); // только в режиме onboarding
-        } else {
-            UI.showScreen('main-app');
-            UI.fillProfileInputs();
-            UI.updateExList();
-            UI.renderAll();
-
-            const navItems = document.querySelectorAll('.nav-item');
-            if (navItems.length) UI.switchTab('tab-hero', navItems[0]);
-        }
-    },
+    };
 
     /** ---------------------------------------------------------
-     *  Сохранение всех данных в localStorage (debounced)
+     *  Валидация импортированных данных
      * --------------------------------------------------------- */
-    _saveTimeout: null,
-    /**
-     *  save([force]) – сохраняет состояние.
-     *  Если `force === true`, запись происходит сразу без debounce.
-     */
-    save(force = false) {
-        if (force) {
-            this._commitSave();
-            return;
+    const _validateImportedData = data => {
+        if (typeof data !== 'object' || data === null) {
+            console.warn('[State] Импортированные данные не являются объектом');
+            return false;
         }
-        clearTimeout(this._saveTimeout);
-        this._saveTimeout = setTimeout(() => this._commitSave(), 300);
-    },
-
-    /** Выполняет запись в localStorage без задержек */
-    _commitSave() {
-        try {
-            if (this.profile) localStorage.setItem('ip_profile', JSON.stringify(this.profile));
-            localStorage.setItem('ip_history', JSON.stringify(this.history));
-            localStorage.setItem('ip_current', JSON.stringify(this.currentSession));
-            localStorage.setItem('ip_prs', JSON.stringify(this.personalRecords));
-            localStorage.setItem('ip_xp', JSON.stringify(this.totalXP));
-            localStorage.setItem('ip_lastEx', this.lastExName || '');
-        } catch (e) {
-            console.error('Ошибка при сохранении в localStorage', e);
+        if (data.profile != null && typeof data.profile !== 'object') {
+            console.warn('[State] profile должен быть объектом');
+            return false;
         }
-    },
+        if (!Array.isArray(data.history) ||
+            !Array.isArray(data.currentSession) ||
+            typeof data.personalRecords !== 'object') {
+            console.warn('[State] История, текущая сессия или PR имеют неверный тип');
+            return false;
+        }
+        if (typeof data.totalXP !== 'number' && typeof data.totalXP !== 'string') {
+            console.warn('[State] totalXP имеет неверный тип');
+            return false;
+        }
+        return true;
+    };
 
     /** ---------------------------------------------------------
-     *  Загрузка всех данных из localStorage с полной безопасностью
+     *  Публичный API
      * --------------------------------------------------------- */
-    load() {
-        const safeParse = (key, def) => {
-            const raw = localStorage.getItem(key);
-            if (!raw || raw === 'undefined') return def;
+    return {
+        /** -------------------------------------------------
+         *  Инициализация: загрузка, подключение к Telegram‑WebApp,
+         *  выбор стартового экрана.
+         * ------------------------------------------------- */
+        init() {
+            // Telegram‑WebApp (если доступен)
             try {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(def)) return Array.isArray(parsed) ? parsed : def;
-                if (def === null) return (parsed && typeof parsed === 'object') ? parsed : def;
-                return (typeof parsed === typeof def) ? parsed : def;
-            } catch (_) {
-                return def;
+                if (window.Telegram?.WebApp) {
+                    const tg = window.Telegram.WebApp;
+                    tg.ready();
+                    tg.expand();
+
+                    UI.applyTelegramTheme();
+                    tg.onEvent('themeChanged', UI.applyTelegramTheme);
+                }
+            } catch (e) {
+                console.warn('Telegram API not available (running in browser?)', e);
             }
-        };
 
-        this.profile          = safeParse('ip_profile', null);
-        this.history          = safeParse('ip_history', []);
-        this.currentSession   = safeParse('ip_current', []);
-        this.personalRecords  = safeParse('ip_prs', {});
+            // Загрузка данных
+            this.load();
 
-        // totalXP может быть числом либо JSON‑строкой
-        const xpRaw = localStorage.getItem('ip_xp');
-        if (xpRaw) {
-            try { this.totalXP = JSON.parse(xpRaw); }
-            catch (_) { this.totalXP = parseInt(xpRaw, 10) || 0; }
-        } else {
+            // UI обязателен
+            if (typeof UI === 'undefined') {
+                alert('Ошибка: модуль UI не загружен');
+                return;
+            }
+
+            // Стартовый экран
+            if (!this.profile?.weight) {
+                UI.showScreen('screen-onboarding');
+                UI.renderSetupInputs();
+            } else {
+                UI.showScreen('main-app');
+                UI.fillProfileInputs();
+                UI.populateCategories();                     // ← гарантируем, что категории и упражнения уже есть
+                UI.renderAll();
+
+                const navItems = document.querySelectorAll('.nav-item');
+                if (navItems.length) UI.switchTab('tab-hero', navItems[0]);
+            }
+        },
+
+        /** -------------------------------------------------
+         *  Загрузка всех данных из localStorage.
+         * ------------------------------------------------- */
+        load() {
+            const storedVersion = parseInt(localStorage.getItem(STORAGE_KEYS.version), 10);
+            if (isNaN(storedVersion) || storedVersion !== _VERSION) {
+                console.warn('[State] Версия данных несовместима, делаем мягкий сброс');
+                // Сохраняем только новую версию, чтобы дальше не «залипали».
+                this.resetAll(true, false);
+                localStorage.setItem(STORAGE_KEYS.version, _VERSION);
+                return;
+            }
+
+            this.profile        = _safeParse(localStorage.getItem(STORAGE_KEYS.profile), null);
+            this.history        = _safeParse(localStorage.getItem(STORAGE_KEYS.history), []);
+            this.currentSession = _safeParse(localStorage.getItem(STORAGE_KEYS.current), []);
+            this.personalRecords = _safeParse(localStorage.getItem(STORAGE_KEYS.prs), {});
+
+            const xpRaw = localStorage.getItem(STORAGE_KEYS.xp);
+            if (xpRaw) {
+                try { this.totalXP = JSON.parse(xpRaw); }
+                catch (_) { this.totalXP = parseInt(xpRaw, 10) || 0; }
+            } else {
+                this.totalXP = 0;
+            }
+
+            this.lastExName = localStorage.getItem(STORAGE_KEYS.lastEx) || null;
+            this.calcTotalXP();
+        },
+
+        /** -------------------------------------------------
+         *  Сохранение (debounced)
+         * ------------------------------------------------- */
+        _saveTimeout: null,
+        save(force = false) {
+            if (force) {
+                this._commitSave();
+                return;
+            }
+            clearTimeout(this._saveTimeout);
+            this._saveTimeout = setTimeout(() => this._commitSave(), 300);
+        },
+
+        /** Фактическая запись без задержки */
+        _commitSave() {
+            try {
+                if (this.profile) localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(this.profile));
+                localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(this.history));
+                localStorage.setItem(STORAGE_KEYS.current, JSON.stringify(this.currentSession));
+                localStorage.setItem(STORAGE_KEYS.prs, JSON.stringify(this.personalRecords));
+                localStorage.setItem(STORAGE_KEYS.xp, JSON.stringify(this.totalXP));
+                localStorage.setItem(STORAGE_KEYS.lastEx, this.lastExName || '');
+                localStorage.setItem(STORAGE_KEYS.version, _VERSION);
+            } catch (e) {
+                console.error('[State] Ошибка при записи в localStorage', e);
+                if (typeof UI !== 'undefined') UI.showToast('⚠️ Не удалось записать данные');
+            }
+        },
+
+        /** -------------------------------------------------
+         *  Пересчёт общего XP из истории
+         * ------------------------------------------------- */
+        calcTotalXP() {
             this.totalXP = 0;
-        }
+            this.history.forEach((rec, idx) => {
+                const xp = Number(rec.xp);
+                if (isNaN(xp)) {
+                    console.warn(`[State] Запись истории #${idx} не содержит корректного xp`, rec);
+                } else {
+                    this.totalXP += xp;
+                }
+            });
+        },
 
-        this.calcTotalXP();               // гарантируем консистентность
-        this.lastExName = localStorage.getItem('ip_lastEx') || null;
-    },
+        /** -------------------------------------------------
+         *  Полный сброс (можно сохранить версию и/или перезагрузить)
+         * ------------------------------------------------- */
+        resetAll(preserveVersion = false, reloadPage = true) {
+            Object.values(STORAGE_KEYS).forEach(k => {
+                if (preserveVersion && k === STORAGE_KEYS.version) return;
+                localStorage.removeItem(k);
+            });
 
-    /** ---------------------------------------------------------
-     *  Пересчёт общего XP из массива history
-     * --------------------------------------------------------- */
-    calcTotalXP() {
-        this.totalXP = this.history.reduce((sum, rec) => sum + (rec.xp || 0), 0);
-    },
+            this.profile = null;
+            this.history = [];
+            this.currentSession = [];
+            this.personalRecords = {};
+            this.totalXP = 0;
+            this.lastExName = null;
 
-    /** ---------------------------------------------------------
-     *  Полный сброс прогресса + перезагрузка страницы
-     * --------------------------------------------------------- */
-    resetAll() {
-        const keys = ['ip_profile', 'ip_history', 'ip_current',
-                      'ip_prs', 'ip_xp', 'ip_lastEx'];
-        keys.forEach(k => localStorage.removeItem(k));
+            const toast = document.getElementById('toast');
+            if (toast) toast.className = 'hidden';
+            const resultScreen = document.getElementById('screen-result');
+            if (resultScreen) resultScreen.classList.remove('active-screen');
 
-        this.profile = null;
-        this.history = [];
-        this.currentSession = [];
-        this.personalRecords = {};
-        this.totalXP = 0;
-        this.lastExName = null;
+            if (reloadPage) window.location.reload();
+        },
 
-        // Перезагружаем страницу
-        window.location.reload();
-    },
+        /** -------------------------------------------------
+         *  Пользовательский «безопасный» сброс – вызывается из UI.
+         * ------------------------------------------------- */
+        safeReset() {
+            if (confirm('Удалить весь прогресс и профиль? Это действие нельзя отменить.')) {
+                this.resetAll();
+            }
+        },
 
-    /** ---------------------------------------------------------
-     *  Пользовательский (безопасный) сброс – вызывается из UI
-     * --------------------------------------------------------- */
-    safeReset() {
-        if (confirm('Удалить весь прогресс и профиль? Это действие нельзя отменить.')) {
-            this.resetAll();
-        }
-    },
+        /** -------------------------------------------------
+         *  Экспорт данных (для бэкапа)
+         * ------------------------------------------------- */
+        exportData() {
+            const data = {
+                profile: this.profile,
+                history: this.history,
+                currentSession: this.currentSession,
+                personalRecords: this.personalRecords,
+                totalXP: this.totalXP,
+                lastExName: this.lastExName
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ironpath-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        },
 
-    // ---------------------------------------------------------------
-    //  Экспорт / импорт данных (для бэкапа)
-    // ---------------------------------------------------------------
-    exportData() {
-        const data = {
-            profile: this.profile,
-            history: this.history,
-            currentSession: this.currentSession,
-            personalRecords: this.personalRecords,
-            totalXP: this.totalXP,
-            lastExName: this.lastExName
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ironpath-backup-${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    },
+        /** -------------------------------------------------
+         *  Импорт данных (бэкап)
+         * ------------------------------------------------- */
+        importData(jsonStr) {
+            try {
+                const data = JSON.parse(jsonStr);
+                if (!_validateImportedData(data)) {
+                    UI.showToast('❌ Данные некорректны');
+                    return;
+                }
+                this.profile = data.profile || null;
+                this.history = data.history || [];
+                this.currentSession = data.currentSession || [];
+                this.personalRecords = data.personalRecords || {};
+                this.totalXP = typeof data.totalXP === 'string' ? parseInt(data.totalXP, 10) : data.totalXP || 0;
+                this.lastExName = data.lastExName || null;
+                this.save(true);
+                UI.renderAll();
+                UI.showToast('✅ Данные импортированы');
+            } catch (e) {
+                console.error('[State] Ошибка импорта данных', e);
+                UI.showToast('❌ Не удалось импортировать данные');
+            }
+        },
 
-    importData(jsonStr) {
-        try {
-            const data = JSON.parse(jsonStr);
-            this.profile = data.profile || null;
-            this.history = data.history || [];
-            this.currentSession = data.currentSession || [];
-            this.personalRecords = data.personalRecords || {};
-            this.totalXP = data.totalXP || 0;
-            this.lastExName = data.lastExName || null;
-            this.save(true);
-            UI.renderAll();
-        } catch (e) {
-            UI.showToast('❌ Не удалось импортировать данные');
-        }
-    }
-};
+        /** -------------------------------------------------
+         *  Геттеры / Сеттеры
+         * ------------------------------------------------- */
+        get profile()    { return _state.profile; },
+        set profile(v)    { _state.profile = v; },
+
+        get history()     { return _state.history; },
+        set history(v)    { _state.history = v; },
+
+        get currentSession() { return _state.currentSession; },
+        set currentSession(v) { _state.currentSession = v; },
+
+        get personalRecords() { return _state.personalRecords; },
+        set personalRecords(v) { _state.personalRecords = v; },
+
+        get totalXP() { return _state.totalXP; },
+        set totalXP(v) { _state.totalXP = v; },
+
+        get lastExName() { return _state.lastExName; },
+        set lastExName(v) { _state.lastExName = v; }
+    };
+})();
 
 /* -----------------------------------------------------------------
- *  Сохраняем состояние сразу при попытке закрыть/перезагрузить страницу
+ *  Сохраняем состояние перед закрытием/перезагрузкой страницы
  * ----------------------------------------------------------------- */
 window.addEventListener('beforeunload', () => {
-    // Принудительно сохраняем без debounce
-    State.save(true);
+    try { State.save(true); }
+    catch (e) { console.error('[State] Ошибка в beforeunload', e); }
 });
